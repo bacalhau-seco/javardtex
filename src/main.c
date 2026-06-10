@@ -13,7 +13,7 @@
 #define STAND_HEIGHT     1.0f
 #define BOTTOM_HEIGHT    0.5f
 #define ACCEL           90.0f
-#define AIR_ACCEL       50.0f
+#define AIR_ACCEL        5.0f
 
 //----------------------------------------------------------------------------------
 // Types and Structures Definition
@@ -33,10 +33,7 @@ static Vector2 sensitivity = { 0.001f, 0.001f };
 
 static Body player = { 0 };
 static Vector2 lookRotation = { 0 };
-static float headTimer = 0.0f;
-static float walkLerp = 0.0f;
 static float headLerp = STAND_HEIGHT;
-static Vector2 lean = { 0 };
 
 //----------------------------------------------------------------------------------
 // Module Functions Declaration
@@ -99,19 +96,6 @@ int main(void)
             player.position.z,
         };
 
-        if (player.isGrounded && ((forward != 0) || (sideway != 0)))
-        {
-            headTimer += delta*3.0f;
-        //    walkLerp = Lerp(walkLerp, 1.0f, 10.0f*delta);
-        }
-        else
-        {
-        //    walkLerp = Lerp(walkLerp, 0.0f, 10.0f*delta);
-        }
-
-        //lean.x = Lerp(lean.x, sideway*0.02f, 10.0f*delta);
-        //lean.y = Lerp(lean.y, forward*0.015f, 10.0f*delta);
-
         UpdateCameraFPS(&camera);
         //----------------------------------------------------------------------------------
 
@@ -167,24 +151,12 @@ static void UpdateCameraFPS(Camera *camera)
     Vector3 right = Vector3Normalize(Vector3CrossProduct(yaw, up));
 
     // Rotate view vector around right axis
-    float pitchAngle = -lookRotation.y - lean.y;
-    pitchAngle = Clamp(pitchAngle, -PI/2 + 0.0001f, PI/2 - 0.0001f); // Clamp angle so it doesn't go past straight up or straight down
+    float pitchAngle = -lookRotation.y;
+    pitchAngle = Clamp(pitchAngle, -PI/2 + 0.0001f, PI/2 - 0.0001f);
+
     Vector3 pitch = Vector3RotateByAxisAngle(yaw, right, pitchAngle);
 
-    // Head animation
-    // Rotate up direction around forward axis
-    float headSin = sinf(headTimer*PI);
-    float headCos = cosf(headTimer*PI);
-    const float stepRotation = 0.01f;
-    camera->up = Vector3RotateByAxisAngle(up, pitch, headSin*stepRotation + lean.x);
-
-    // Camera BOB
-    const float bobSide = 0.1f;
-    const float bobUp = 0.15f;
-    Vector3 bobbing = Vector3Scale(right, headSin*bobSide);
-    bobbing.y = fabsf(headCos*bobUp);
-
-    camera->position = Vector3Add(camera->position, Vector3Scale(bobbing, walkLerp));
+    camera->up = up;
     camera->target = Vector3Add(camera->position, pitch);
 }
 
@@ -262,8 +234,7 @@ void UpdateBody(Body *body, float rot, char side, char forward, bool jumpPressed
         body->velocity.z
     };
 
-
-
+    // RUNS ON GROUND
     if (body->isGrounded)
     {
         float decel = FRICTION;
@@ -280,6 +251,7 @@ void UpdateBody(Body *body, float rot, char side, char forward, bool jumpPressed
         body->velocity.x = hvel.x;
         body->velocity.z = hvel.z;
     }
+    // RUNS ON AIR
     else {
         float wishspd = Vector3Length(body->dir) * MAX_SPEED;
         	if (wishspd > 10)
@@ -287,7 +259,7 @@ void UpdateBody(Body *body, float rot, char side, char forward, bool jumpPressed
         float currentSpeed = Vector3DotProduct(hvel, body->dir);
         printf("currentSpeed: %f\n", currentSpeed);
         float addSpeed = wishspd - currentSpeed;
-        float accel = AIR_ACCEL * wishspd;
+        float accel = AIR_ACCEL * wishspd * delta;
         if (accel > addSpeed)
             accel = addSpeed;
         hvel.x += body->dir.x * accel;
