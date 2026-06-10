@@ -13,7 +13,7 @@
 #define STAND_HEIGHT     1.0f
 #define BOTTOM_HEIGHT    0.5f
 #define ACCEL           90.0f
-#define AIR_ACCEL        5.0f
+#define AIR_ACCEL        1.0f
 
 //----------------------------------------------------------------------------------
 // Types and Structures Definition
@@ -109,19 +109,35 @@ int main(void)
                 DrawLevel();
             EndMode3D();
 
-            // Draw info box
-            DrawRectangle(5, 5, 330, 75, Fade(SKYBLUE, 0.5f));
-            DrawRectangleLines(5, 5, 330, 75, BLUE);
+            Vector3 v = player.velocity;
+            Vector3 hvel = { v.x, 0.0f, v.z };
 
-            DrawText("Camera controls:", 15, 15, 10, BLACK);
-            DrawText("- Move keys: W, A, S, D, Space, Left-Ctrl", 15, 30, 10, BLACK);
-            DrawText("- Look around: arrow keys or mouse", 15, 45, 10, BLACK);
-            DrawText(TextFormat("- Velocity Len: (%06.3f)", Vector2Length((Vector2){ player.velocity.x, player.velocity.z })), 15, 60, 10, BLACK);
+            float speed = Vector3Length(hvel);
+            float wishSpeed = Vector3DotProduct(hvel, player.dir);
 
-            DrawLine(cx - 12, cy, cx - 4, cy, GREEN);
-            DrawLine(cx + 4,  cy, cx + 12, cy, GREEN);
-            DrawLine(cx, cy - 12, cx, cy - 4, GREEN);
-            DrawLine(cx, cy + 4,  cx, cy + 12, GREEN);
+            DrawRectangle(5, 90, 330, 105, Fade(DARKGRAY, 0.4f));
+            DrawRectangleLines(5, 90, 330, 105, DARKGRAY);
+
+            DrawText(TextFormat("Speed: %.2f", speed), 15, 100, 10, RAYWHITE);
+            DrawText(TextFormat("WishSpeed: %.2f", wishSpeed), 15, 115, 10, RAYWHITE);
+            DrawText(TextFormat("Vel Y: %.2f", v.y), 15, 130, 10, RAYWHITE);
+            DrawText(TextFormat("Grounded: %s", player.isGrounded ? "yes" : "no"),
+                15, 145, 10, RAYWHITE);
+
+            DrawText(TextFormat("WishDir: (%.2f, %.2f, %.2f)",
+                player.dir.x, player.dir.y, player.dir.z),
+                15, 160, 10, RAYWHITE);
+            int size = 6;
+            int gap = 3;
+            int thickness = 2;
+
+            // horizontal
+            DrawLineEx((Vector2){ cx - size - gap, cy }, (Vector2){ cx - gap, cy }, thickness, GREEN);
+            DrawLineEx((Vector2){ cx + gap, cy }, (Vector2){ cx + size + gap, cy }, thickness, GREEN);
+
+            // vertical
+            DrawLineEx((Vector2){ cx, cy - size - gap }, (Vector2){ cx, cy - gap }, thickness, GREEN);
+            DrawLineEx((Vector2){ cx, cy + gap }, (Vector2){ cx, cy + size + gap }, thickness, GREEN);      
 
         EndDrawing();
         //----------------------------------------------------------------------------------
@@ -221,9 +237,8 @@ void UpdateBody(Body *body, float rot, char side, char forward, bool jumpPressed
         body->velocity.y = JUMP_FORCE;
         body->isGrounded = false;
     }
-
-    Vector3 front = (Vector3){ sinf(rot), 0.f, cosf(rot) }; // camera up and down
-    Vector3 right = (Vector3){ cosf(-rot), 0.f, sinf(-rot) }; // camera left and right
+    Vector3 front = { sinf(rot), 0.f, cosf(rot) };
+    Vector3 right = { cosf(rot), 0.f, -sinf(rot) };
 
     Vector3 wishDir = (Vector3){ input.x*right.x + input.y*front.x, 0.0f, input.x*right.z + input.y*front.z, }; // essentially "wishDir" from quake
     body->dir = wishDir;
@@ -257,7 +272,6 @@ void UpdateBody(Body *body, float rot, char side, char forward, bool jumpPressed
         	if (wishspd > 10)
             wishspd = 10;
         float currentSpeed = Vector3DotProduct(hvel, body->dir);
-        printf("currentSpeed: %f\n", currentSpeed);
         float addSpeed = wishspd - currentSpeed;
         float accel = AIR_ACCEL * wishspd * delta;
         if (accel > addSpeed)
