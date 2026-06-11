@@ -14,7 +14,6 @@
 #define BOTTOM_HEIGHT    0.5f
 #define ACCEL           90.0f
 #define AIR_ACCEL       50.0f 
-#define AIR_CTRL         5.01f
 
 //----------------------------------------------------------------------------------
 // Types and Structures Definition
@@ -242,6 +241,7 @@ void UpdateBody(Body *body, float rot, char side, char forward, bool jumpPressed
     Vector3 right = { cosf(rot), 0.f, -sinf(rot) };
 
     Vector3 wishDir = (Vector3){ input.x*right.x + input.y*front.x, 0.0f, input.x*right.z + input.y*front.z, }; // essentially "wishDir" from quake
+    wishDir = Vector3Normalize(wishDir);
     body->dir = wishDir;
     
     Vector3 hvel = {
@@ -270,20 +270,29 @@ void UpdateBody(Body *body, float rot, char side, char forward, bool jumpPressed
     // RUNS ON AIR
     else {
         // does the same as VectorNormalize() in quake's code base
-        Vector3 wishveloc = (Vector3) { body->dir.x * MAX_SPEED, 0, body->dir.z * MAX_SPEED,}; 
+        Vector3 wishveloc = Vector3Scale(body->dir, MAX_SPEED);
         float wishspd = Vector3Length(wishveloc);
         wishveloc = Vector3Normalize(wishveloc);
 
         // limits the wishspd size
-        if (wishspd > 5)
-            wishspd = 5;
+        if (wishspd > 1)
+            wishspd = 1;
+
         float currentSpeed = Vector3DotProduct(hvel, wishveloc);
         float addSpeed = wishspd - currentSpeed;
-        float accel = AIR_ACCEL * wishspd * delta;
-        if (accel > addSpeed)
-            accel = addSpeed;
-        hvel.x += body->dir.x * accel;
-        hvel.z += body->dir.z * accel;
+
+        // prevents negative add speed
+        if (addSpeed > 0)
+        {
+            float accel = AIR_ACCEL * wishspd * delta;
+
+            if (accel > addSpeed)
+                accel = addSpeed;
+
+            hvel.x += wishveloc.x * accel;
+            hvel.z += wishveloc.z * accel;
+        }
+
         body->velocity.x = hvel.x;
         body->velocity.z = hvel.z;
     }
