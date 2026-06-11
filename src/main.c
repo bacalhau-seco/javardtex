@@ -13,7 +13,8 @@
 #define STAND_HEIGHT     1.0f
 #define BOTTOM_HEIGHT    0.5f
 #define ACCEL           90.0f
-#define AIR_ACCEL        1.0f
+#define AIR_ACCEL       50.0f 
+#define AIR_CTRL         5.01f
 
 //----------------------------------------------------------------------------------
 // Types and Structures Definition
@@ -268,10 +269,15 @@ void UpdateBody(Body *body, float rot, char side, char forward, bool jumpPressed
     }
     // RUNS ON AIR
     else {
-        float wishspd = Vector3Length(body->dir) * MAX_SPEED;
-        	if (wishspd > 10)
-            wishspd = 10;
-        float currentSpeed = Vector3DotProduct(hvel, body->dir);
+        // does the same as VectorNormalize() in quake's code base
+        Vector3 wishveloc = (Vector3) { body->dir.x * MAX_SPEED, 0, body->dir.z * MAX_SPEED,}; 
+        float wishspd = Vector3Length(wishveloc);
+        wishveloc = Vector3Normalize(wishveloc);
+
+        // limits the wishspd size
+        if (wishspd > 5)
+            wishspd = 5;
+        float currentSpeed = Vector3DotProduct(hvel, wishveloc);
         float addSpeed = wishspd - currentSpeed;
         float accel = AIR_ACCEL * wishspd * delta;
         if (accel > addSpeed)
