@@ -1,9 +1,10 @@
 CC = clang
 TARGET = build/idek
 
-CFLAGS= -std=c99 -Iinclude -Werror -Wall -Wextra
-SRC = src/*
-LIB =  -Llib -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
+CFLAGS= -std=c99 -Werror -Iinclude -Wall -Wextra
+CFLAGS2= -std=c99 -Iinclude -Wall -Wextra
+SRC = src/cl_main.c
+LIB = -Llib -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
 
 all: 
 	$(CC) $(CFLAGS) $(SRC) $(LIB) -o $(TARGET) 
@@ -13,3 +14,6 @@ run:
 
 clean:
 	rm -f $(TARGET)
+
+force:
+	$(CC) $(CFLAGS2) $(SRC) $(LIB) -o $(TARGET) && ./build/idek
