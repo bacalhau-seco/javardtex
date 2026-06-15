@@ -1,5 +1,6 @@
 #include "raylib.h"
 #include "raymath.h"
+#include <stdbool.h>
 #include <stdio.h>
 
 //----------------------------------------------------------------------------------
@@ -12,6 +13,7 @@
 #define FRICTION         0.85f
 #define STAND_HEIGHT     1.0f
 #define BOTTOM_HEIGHT    0.5f
+#define CROUCH_HEIGHT    0.5f
 #define ACCEL           90.0f
 #define AIR_ACCEL       50.0f 
 
@@ -40,7 +42,7 @@ static float headLerp = STAND_HEIGHT;
 //----------------------------------------------------------------------------------
 static void DrawLevel(void);
 static void UpdateCameraFPS(Camera *camera);
-static void UpdateBody(Body *body, float rot, char side, char forward, bool jumpPressed); //, bool crouchHold
+static void UpdateBody(Body *body, float rot, char side, char forward, bool jumpPressed, bool crouchHold);
 
 //------------------------------------------------------------------------------------
 // Program main entry point
@@ -85,11 +87,11 @@ int main(void)
 
         char sideway = (IsKeyDown(KEY_D) - IsKeyDown(KEY_A));
         char forward = (IsKeyDown(KEY_W) - IsKeyDown(KEY_S));
-        //bool crouching = IsKeyDown(KEY_LEFT_CONTROL);
-        UpdateBody(&player, lookRotation.x, sideway, forward, IsKeyPressed(KEY_SPACE)); //, crouching
+        bool crouching = IsKeyDown(KEY_LEFT_CONTROL);
+        UpdateBody(&player, lookRotation.x, sideway, forward, IsKeyPressed(KEY_SPACE), crouching);
 
         float delta = GetFrameTime();
-        headLerp = Lerp(headLerp, (/*crouching ? CROUCH_HEIGHT : */STAND_HEIGHT), 20.0f*delta);
+        headLerp = Lerp(headLerp, (crouching ? CROUCH_HEIGHT : STAND_HEIGHT), 20.0f*delta);
         camera.position = (Vector3){
             player.position.x,
             player.position.y + (BOTTOM_HEIGHT + headLerp),
@@ -223,7 +225,7 @@ static void DrawLevel(void)
 }
 
 // Update body considering current world state
-void UpdateBody(Body *body, float rot, char side, char forward, bool jumpPressed) //, bool crouchHold
+void UpdateBody(Body *body, float rot, char side, char forward, bool jumpPressed, bool crouchHold)
 {
     Vector2 input = (Vector2){ (float)side, (float)-forward }; // side = horizontal input / forward = vertical input
     if ((side != 0) && (forward != 0)) input = Vector2Normalize(input); // normalizes input
@@ -262,10 +264,18 @@ void UpdateBody(Body *body, float rot, char side, char forward, bool jumpPressed
         if (Vector3Length(wishDir) == 0.0f){ accel = 0; }
         if (accel > addSpeed)
             accel = addSpeed;
-        hvel.x += body->dir.x * accel;
-        hvel.z += body->dir.z * accel;
-        body->velocity.x = hvel.x;
-        body->velocity.z = hvel.z;
+        if (crouchHold == true) {
+            hvel.x += body->dir.x * accel/2;
+            hvel.z += body->dir.z * accel/2;
+            body->velocity.x = hvel.x/2;
+            body->velocity.z = hvel.z/2;
+        }
+        else {
+            hvel.x += body->dir.x * accel;
+            hvel.z += body->dir.z * accel;
+            body->velocity.x = hvel.x;
+            body->velocity.z = hvel.z;
+        }
     }
     // RUNS ON AIR
     else {
