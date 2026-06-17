@@ -1,4 +1,4 @@
-#include "defs.h"
+#include "../include/defs.h"
 
 //----------------------------------------------------------------------------------
 // Global Variables Definition
@@ -49,20 +49,20 @@ int main(void)
     // Main game loop
     while (!WindowShouldClose())    // Detect window close button or ESC key
     {
-        // Update
-        //----------------------------------------------------------------------------------
-        Vector2 mouseDelta = GetMouseDelta();
-        lookRotation.x -= mouseDelta.x*sensitivity.x;
-        lookRotation.y += mouseDelta.y*sensitivity.y;
+        InputState in = GetInputState();
 
-        char sideway = (IsKeyDown(KEY_D) - IsKeyDown(KEY_A));
-        char forward = (IsKeyDown(KEY_W) - IsKeyDown(KEY_S));
-        bool crouching = IsKeyDown(KEY_LEFT_CONTROL);
+        lookRotation.x -= in.mouse.x*sensitivity.x;
+        lookRotation.y += in.mouse.y*sensitivity.y;
 
-        UpdateBody(&player, lookRotation.x, sideway, forward, IsKeyPressed(KEY_SPACE), crouching);
+        UpdateBody(&player,
+                   lookRotation.x,
+                   in.side,
+                   in.forward,
+                   in.jump,
+                   in.crouch);
 
         float delta = GetFrameTime();
-        headLerp = Lerp(headLerp, (crouching ? CROUCH_HEIGHT : STAND_HEIGHT), 20.0f*delta);
+        headLerp = Lerp(headLerp, (in.crouch ? CROUCH_HEIGHT : STAND_HEIGHT), 20.0f*delta);
         camera.position = (Vector3){
             player.position.x,
             player.position.y + (BOTTOM_HEIGHT + headLerp),

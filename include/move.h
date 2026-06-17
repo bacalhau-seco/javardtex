@@ -1,7 +1,4 @@
-// Main client header file
-#include "raylib.h"
-#include "raymath.h"
-#include <stdbool.h>
+#import "raylib.h"
 
 #define GRAVITY         32.0f
 #define MAX_SPEED       20.0f
