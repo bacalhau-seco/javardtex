@@ -21,4 +21,4 @@ typedef struct {
     bool isGrounded;
 } Body;
 
-static void UpdateBody(Body *body, float rot, char side, char forward, bool jumpPressed, bool crouchHold);
+void UpdateBody(Body *body, float rot, char side, char forward, bool jumpPressed, bool crouchHold);

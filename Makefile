@@ -3,7 +3,7 @@ TARGET = build/idek
 
 CFLAGS= -std=c99 -Werror -Iinclude -Wall -Wextra
 CFLAGS2= -std=c99 -Iinclude -Wall -Wextra
-SRC = src/cl_main.c
+SRC = src/*.c
 LIB = -Llib -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
 
 all: 
