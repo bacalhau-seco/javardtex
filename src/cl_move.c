@@ -1,5 +1,5 @@
-#include "defs.h"
-//
+#include "../include/defs.h"
+
 // Update body considering current world state
 void UpdateBody(Body *body, float rot, char side, char forward, bool jumpPressed, bool crouchHold)
 {
