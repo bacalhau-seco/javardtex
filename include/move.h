@@ -1,14 +1,14 @@
 #import "raylib.h"
 
-#define GRAVITY         32.0f
+#define GRAVITY         20.0f
 #define MAX_SPEED       20.0f
-#define JUMP_FORCE      12.0f
-#define FRICTION         0.85f
-#define STAND_HEIGHT     1.0f
-#define BOTTOM_HEIGHT    0.5f
-#define CROUCH_HEIGHT    0.5f
+#define JUMP_FORCE      6.5f
+#define FRICTION        0.85f
+#define STAND_HEIGHT    1.74f
+#define BOTTOM_HEIGHT   0.5f
+#define CROUCH_HEIGHT   0.6f
 #define ACCEL           90.0f
-#define AIR_ACCEL       50.0f 
+#define AIR_ACCEL       90.0f 
 
 // Body structure
 typedef struct {
