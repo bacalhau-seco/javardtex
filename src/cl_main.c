@@ -82,17 +82,17 @@ int main(void)
                 DrawLevel();
             EndMode3D();
 
+            Vector3 wishveloc = Vector3Scale(player.dir, MAX_SPEED);
+            float wishspd = Vector3Length(wishveloc);
             Vector3 v = player.velocity;
             Vector3 hvel = { v.x, 0.0f, v.z };
-
             float speed = Vector3Length(hvel);
-            float wishSpeed = Vector3DotProduct(hvel, player.dir);
 
             DrawRectangle(5, 90, 330, 105, Fade(DARKGRAY, 0.4f));
             DrawRectangleLines(5, 90, 330, 105, DARKGRAY);
 
             DrawText(TextFormat("Speed: %.2f", speed), 15, 100, 10, RAYWHITE);
-            DrawText(TextFormat("WishSpeed: %.2f", wishSpeed), 15, 115, 10, RAYWHITE);
+            DrawText(TextFormat("WishSpeed: %.2f", wishspd), 15, 115, 10, RAYWHITE);
             DrawText(TextFormat("Vel Y: %.2f", v.y), 15, 130, 10, RAYWHITE);
             DrawText(TextFormat("Grounded: %s", player.isGrounded ? "yes" : "no"),
                 15, 145, 10, RAYWHITE);
@@ -153,7 +153,7 @@ static void UpdateCameraFPS(Camera *camera)
 static void DrawLevel(void)
 {
     const int floorExtent = 25;
-    const float tileSize = 5.0f;
+    const float tileSize = 64.0f;
     const Color tileColor1 = (Color){ 150, 200, 200, 255 };
 
     // Floor tiles

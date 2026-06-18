@@ -22,35 +22,56 @@ void UpdateBody(Body *body, float rot, char side, char forward, bool jumpPressed
     wishDir = Vector3Normalize(wishDir);
     body->dir = wishDir;
     
-    Vector3 hvel = {
-        body->velocity.x,
-        0.0f,
-        body->velocity.z
-    };
+    Vector3 hvel = {body->velocity.x, 0.0f, body->velocity.z};
 
     // RUNS ON GROUND
     if (body->isGrounded)
     {
-        float decel = FRICTION;
-        hvel = (Vector3){ body->velocity.x*decel, 0.0f, body->velocity.z*decel };
-        float currentSpeed = Vector3DotProduct(hvel, body->dir);
-        float addSpeed = MAX_SPEED - currentSpeed;
-        float accel = ACCEL * delta;
-        if (Vector3Length(hvel) <= 0.1) { hvel = (Vector3) {0}; }
-        if (Vector3Length(wishDir) == 0.0f){ accel = 0; }
-        if (accel > addSpeed)
-            accel = addSpeed;
-        if (crouchHold == true) {
-            hvel.x += body->dir.x * accel/2;
-            hvel.z += body->dir.z * accel/2;
-            body->velocity.x = hvel.x/2;
-            body->velocity.z = hvel.z/2;
+        Vector3 wishveloc = Vector3Scale(body->dir, MAX_SPEED);
+        float wishspd = Vector3Length(wishveloc);
+        wishveloc = Vector3Normalize(wishveloc);
+
+
+        // FRICTION
+        float speed = Vector3Length(hvel);
+
+        if (speed > 0.001f)
+        {
+            float friction = FRICTION;
+
+            if (crouchHold)
+                friction *= 2.0f;
+
+            float control = speed < STOPSPEED ? STOPSPEED : speed;
+
+            float newspeed = speed - delta * control * friction;
+
+            if (newspeed < 0)
+                newspeed = 0;
+
+            float scale = newspeed / speed;
+
+            body->velocity.x *= scale;
+            body->velocity.z *= scale;
         }
-        else {
-            hvel.x += body->dir.x * accel;
-            hvel.z += body->dir.z * accel;
-            body->velocity.x = hvel.x;
-            body->velocity.z = hvel.z;
+
+
+        // ACCELERATION
+        hvel = (Vector3){ body->velocity.x, 0.0f, body->velocity.z };
+
+        float currentSpeed = Vector3DotProduct(hvel, wishveloc);
+
+        float addSpeed = wishspd - currentSpeed;
+
+        if (addSpeed > 0)
+        {
+            float accelSpeed = ACCEL * delta * wishspd;
+
+            if (accelSpeed > addSpeed)
+                accelSpeed = addSpeed;
+
+            body->velocity.x += wishveloc.x * accelSpeed;
+            body->velocity.z += wishveloc.z * accelSpeed;
         }
     }
     // RUNS ON AIR
@@ -61,8 +82,8 @@ void UpdateBody(Body *body, float rot, char side, char forward, bool jumpPressed
         wishveloc = Vector3Normalize(wishveloc);
 
         // limits the wishspd size
-        if (wishspd > 1)
-            wishspd = 1;
+        if (wishspd > 30.0f)
+            wishspd = 30.0f;
 
         float currentSpeed = Vector3DotProduct(hvel, wishveloc);
         float addSpeed = wishspd - currentSpeed;
@@ -70,7 +91,7 @@ void UpdateBody(Body *body, float rot, char side, char forward, bool jumpPressed
         // prevents negative add speed
         if (addSpeed > 0)
         {
-            float accel = AIR_ACCEL * wishspd * delta;
+            float accel = AIR_ACCEL * MAX_SPEED * delta;
 
             if (accel > addSpeed)
                 accel = addSpeed;
