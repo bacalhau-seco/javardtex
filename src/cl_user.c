@@ -1,4 +1,19 @@
 #include "../include/defs.h"
+#include <stdio.h>
+
+void Body_OnLand(Body *body)
+{
+    Vector3 hvel = {.x=body->velocity.x, .y=0.0f, .z=body->velocity.z};
+    float speed = Vector3Length(hvel);
+    if (speed > JUMP_PENALTY)
+    {
+        hvel = Vector3Scale(hvel, (speed - JUMP_PENALTY) / speed);
+
+        body->velocity.x = hvel.x;
+        body->velocity.z = hvel.z;
+    }
+    printf("nigga fell");
+}
 
 // Update body considering current world state
 void UpdateBody(Body *body, float rot, char side, char forward, bool jumpPressed, bool crouchHold)
@@ -106,10 +121,18 @@ void UpdateBody(Body *body, float rot, char side, char forward, bool jumpPressed
     body->position.x += body->velocity.x * delta;
     body->position.y += body->velocity.y * delta;
     body->position.z += body->velocity.z * delta;
+
+    bool wasGrounded = body->isGrounded;
+
     if (body->position.y <= 0.0f)
     {
         body->position.y = 0.0f;
         body->velocity.y = 0.0f;
         body->isGrounded = true;
+    }
+
+    if (!wasGrounded && body->isGrounded)
+    {
+        Body_OnLand(body);
     }
 }
