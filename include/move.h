@@ -12,6 +12,7 @@
 #define CROUCH_HEIGHT    32.0f
 #define ACCEL             5.0f
 #define AIR_ACCEL        10.0f 
+#define JUMP_PENALTY      0.0f
 
 // Body structure
 typedef struct {
