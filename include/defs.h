@@ -5,3 +5,4 @@
 
 #include "move.h"
 #include "input.h"
+#include "camera.h"

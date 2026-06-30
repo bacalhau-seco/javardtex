@@ -13,7 +13,6 @@ static float headLerp = STAND_HEIGHT;
 // Module Functions Declaration
 //----------------------------------------------------------------------------------
 static void DrawLevel(void);
-static void UpdateCameraFPS(Camera *camera);
 //------------------------------------------------------------------------------------
 // Program main entry point
 //------------------------------------------------------------------------------------
@@ -27,7 +26,7 @@ int main(void)
     int cy = screenHeight / 2;
 
 
-    InitWindow(screenWidth, screenHeight, "My Awesome CS clone");
+    InitWindow(screenWidth, screenHeight, "engine demo");
 
     // Initialize camera variables
     Camera camera = { 0 };
@@ -39,11 +38,11 @@ int main(void)
         player.position.z,
     };
 
-    UpdateCameraFPS(&camera); // Update camera parameters
+    Camera_Update(&camera, lookRotation);
 
     DisableCursor();        // Limit cursor to relative movement inside the window
 
-    SetTargetFPS(60);       // Set our game to run at 60 frames-per-second
+    SetTargetFPS(500);       // Set our game to run at 60 frames-per-second
     //--------------------------------------------------------------------------------------
 
     // Main game loop
@@ -69,7 +68,7 @@ int main(void)
             player.position.z,
         };
 
-        UpdateCameraFPS(&camera);
+        Camera_Update(&camera, lookRotation);
         //----------------------------------------------------------------------------------
 
         // Draw
@@ -128,26 +127,6 @@ int main(void)
 // Module Functions Definition
 //----------------------------------------------------------------------------------
 // Update camera for FPS behaviour
-static void UpdateCameraFPS(Camera *camera)
-{
-    const Vector3 up = (Vector3){ 0.0f, 1.0f, 0.0f };
-    const Vector3 targetOffset = (Vector3){ 0.0f, 0.0f, -1.0f };
-
-    // Left and right
-    Vector3 yaw = Vector3RotateByAxisAngle(targetOffset, up, lookRotation.x);
-
-    // Up and down
-    Vector3 right = Vector3Normalize(Vector3CrossProduct(yaw, up));
-
-    // Rotate view vector around right axis
-    float pitchAngle = -lookRotation.y;
-    pitchAngle = Clamp(pitchAngle, -PI/2 + 0.0001f, PI/2 - 0.0001f);
-
-    Vector3 pitch = Vector3RotateByAxisAngle(yaw, right, pitchAngle);
-
-    camera->up = up;
-    camera->target = Vector3Add(camera->position, pitch);
-}
 
 // Draw game level
 static void DrawLevel(void)
