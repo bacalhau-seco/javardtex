@@ -1,22 +1,29 @@
-#include "../include/defs.h"
+#include "../include/camera.h"
 
-void Camera_Update(Camera *camera, Vector2 lookRotation)
+void Camera_Update(Camera *camera,
+                   const Body *player,
+                   Vector2 lookRotation,
+                   float headLerp)
 {
-    const Vector3 up = (Vector3){ 0.0f, 1.0f, 0.0f };
-    const Vector3 targetOffset = (Vector3){ 0.0f, 0.0f, -1.0f };
+    camera->position = (Vector3){
+        player->position.x,
+        player->position.y + (BOTTOM_HEIGHT + headLerp),
+        player->position.z,
+    };
 
-    // Left and right
-    Vector3 yaw = Vector3RotateByAxisAngle(targetOffset, up, lookRotation.x);
+    const Vector3 up = { 0.0f, 1.0f, 0.0f };
+    const Vector3 forward = { 0.0f, 0.0f, -1.0f };
 
-    // Up and down
+    Vector3 yaw = Vector3RotateByAxisAngle(forward, up, lookRotation.x);
+
     Vector3 right = Vector3Normalize(Vector3CrossProduct(yaw, up));
 
-    // Rotate view vector around right axis
-    float pitchAngle = -lookRotation.y;
-    pitchAngle = Clamp(pitchAngle, -PI/2 + 0.0001f, PI/2 - 0.0001f);
+    float pitch = Clamp(-lookRotation.y,
+                        -PI/2 + 0.0001f,
+                         PI/2 - 0.0001f);
 
-    Vector3 pitch = Vector3RotateByAxisAngle(yaw, right, pitchAngle);
+    Vector3 dir = Vector3RotateByAxisAngle(yaw, right, pitch);
 
     camera->up = up;
-    camera->target = Vector3Add(camera->position, pitch);
+    camera->target = Vector3Add(camera->position, dir);
 }

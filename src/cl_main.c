@@ -30,7 +30,7 @@ int main(void)
 
     // Initialize camera variables
     Camera camera = { 0 };
-    camera.fovy = 90.0f;
+    camera.fovy = FOV;
     camera.projection = CAMERA_PERSPECTIVE;
     camera.position = (Vector3){
         player.position.x,
@@ -38,11 +38,9 @@ int main(void)
         player.position.z,
     };
 
-    Camera_Update(&camera, lookRotation);
-
     DisableCursor();        // Limit cursor to relative movement inside the window
 
-    SetTargetFPS(500);       // Set our game to run at 60 frames-per-second
+    SetTargetFPS(60);       // Set our game to run at 60 frames-per-second
     //--------------------------------------------------------------------------------------
 
     // Main game loop
@@ -68,7 +66,7 @@ int main(void)
             player.position.z,
         };
 
-        Camera_Update(&camera, lookRotation);
+        Camera_Update(&camera, &player, lookRotation, headLerp);
         //----------------------------------------------------------------------------------
 
         // Draw
@@ -81,6 +79,7 @@ int main(void)
                 DrawLevel();
             EndMode3D();
 
+            // TEMP HUD
             Vector3 wishveloc = Vector3Scale(player.dir, MAX_SPEED);
             float wishspd = Vector3Length(wishveloc);
             Vector3 v = player.velocity;
@@ -122,11 +121,6 @@ int main(void)
 
     return 0;
 }
-
-//----------------------------------------------------------------------------------
-// Module Functions Definition
-//----------------------------------------------------------------------------------
-// Update camera for FPS behaviour
 
 // Draw game level
 static void DrawLevel(void)

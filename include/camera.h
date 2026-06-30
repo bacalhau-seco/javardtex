@@ -1,5 +1,9 @@
 #pragma once
 
+#include "move.h"
 #include "raylib.h"
+#include "raymath.h"
 
-void Camera_Update(Camera *camera, Vector2 lookRotation);
+#define FOV 90.0f
+
+void Camera_Update(Camera *camera, const Body *player, Vector2 lookRotation, float headLerp);
