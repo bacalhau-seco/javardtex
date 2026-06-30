@@ -1,7 +1,9 @@
+#pragma once
+
 #import "raylib.h"
 
 #define GRAVITY         800.0f
-#define MAX_SPEED       270.0f
+#define MAX_SPEED       290.0f
 #define JUMP_FORCE      270.0f
 #define FRICTION          4.0f
 #define STOPSPEED       100.0f
