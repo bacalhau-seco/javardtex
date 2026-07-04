@@ -12,7 +12,6 @@ void Body_OnLand(Body *body)
         body->velocity.x = hvel.x;
         body->velocity.z = hvel.z;
     }
-    printf("nigga fell");
 }
 
 // Update body considering current world state
