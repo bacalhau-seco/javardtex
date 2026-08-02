@@ -1,5 +1,6 @@
 #include "../include/defs.h"
 #include <stdio.h>
+#include <string.h>
 
 static Vector2 sensitivity = { 0.001f, 0.001f };
 static Body player = { 0 };
@@ -11,7 +12,12 @@ int main(int argc, char *argv[])
 {
     if (argc > 1)
     {
-        printf("argument: %s\n", argv[1]);
+        if (strcmp(argv[1], "-game") == 0) {
+            printf("game selected: %s\n", argv[2]);
+        }
+        else {
+            printf("no argument defined");
+        }
 
     }
 
@@ -24,19 +30,10 @@ int main(int argc, char *argv[])
 
     InitWindow(screenWidth, screenHeight, "engine demo");
 
-    // Initialize camera variables
-    Camera camera = { 0 };
-    camera.fovy = FOV;
-    camera.projection = CAMERA_PERSPECTIVE;
-    camera.position = (Vector3){
-        player.position.x,
-        player.position.y + (BOTTOM_HEIGHT + headLerp),
-        player.position.z,
-    };
-
     DisableCursor();        // Limit cursor to relative movement inside the window
 
-    //SetTargetFPS(60);
+    Camera camera;
+    InitCamera(&camera, &player, headLerp);
 
     // Main game loop
     while (!WindowShouldClose())    // Detect window close button or ESC key

@@ -6,3 +6,5 @@
 #include "move.h"
 #include "input.h"
 #include "camera.h"
+
+#include "cvar.h"

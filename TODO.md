@@ -95,6 +95,7 @@ Things that must happen every month:
 - Player movement
 
 ### August 2026
+- Game parsing
 - BSP30 parser
 - WAD3 loader
 - Cvars

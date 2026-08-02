@@ -1,4 +1,5 @@
 #include "../include/camera.h"
+#include "../include/defs.h"
 
 void Camera_Update(Camera *camera,
                    const Body *player,
@@ -26,4 +27,17 @@ void Camera_Update(Camera *camera,
 
     camera->up = up;
     camera->target = Vector3Add(camera->position, dir);
+}
+
+void InitCamera(Camera *camera, const Body *player, float headLerp)
+{
+    *camera = (Camera){0};
+
+    camera->fovy = cl_fov.value;
+    camera->projection = CAMERA_PERSPECTIVE;
+    camera->position = (Vector3){
+        player->position.x,
+        player->position.y + (BOTTOM_HEIGHT + headLerp),
+        player->position.z,
+    };
 }
