@@ -1,25 +1,21 @@
 #include "../include/defs.h"
+#include <stdio.h>
 
-//----------------------------------------------------------------------------------
-// Global Variables Definition
-//----------------------------------------------------------------------------------
 static Vector2 sensitivity = { 0.001f, 0.001f };
-
 static Body player = { 0 };
 static Vector2 lookRotation = { 0 };
 static float headLerp = STAND_HEIGHT;
-
-//----------------------------------------------------------------------------------
-// Module Functions Declaration
-//----------------------------------------------------------------------------------
 static void DrawLevel(void);
-//------------------------------------------------------------------------------------
-// Program main entry point
-//------------------------------------------------------------------------------------
-int main(void)
+
+int main(int argc, char *argv[])
 {
+    if (argc > 1)
+    {
+        printf("argument: %s\n", argv[1]);
+
+    }
+
     // Initialization
-    //--------------------------------------------------------------------------------------
     const int screenWidth = 1024;
     const int screenHeight = 768;
     int cx = screenWidth / 2;
@@ -40,8 +36,7 @@ int main(void)
 
     DisableCursor();        // Limit cursor to relative movement inside the window
 
-    //SetTargetFPS(60);       // Set our game to run at 60 frames-per-second
-    //--------------------------------------------------------------------------------------
+    //SetTargetFPS(60);
 
     // Main game loop
     while (!WindowShouldClose())    // Detect window close button or ESC key
