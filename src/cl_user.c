@@ -1,13 +1,12 @@
 #include "../include/defs.h"
-#include <stdio.h>
 
 void Body_OnLand(Body *body)
 {
     Vector3 hvel = {.x=body->velocity.x, .y=0.0f, .z=body->velocity.z};
     float speed = Vector3Length(hvel);
-    if (speed > JUMP_PENALTY)
+    if (speed > sv_jumppenalty.value)
     {
-        hvel = Vector3Scale(hvel, (speed - JUMP_PENALTY) / speed);
+        hvel = Vector3Scale(hvel, (speed - sv_jumppenalty.value) / speed);
 
         body->velocity.x = hvel.x;
         body->velocity.z = hvel.z;
@@ -22,11 +21,11 @@ void UpdateBody(Body *body, float rot, char side, char forward, bool jumpPressed
 
     float delta = GetFrameTime();
 
-    if (!body->isGrounded) body->velocity.y -= GRAVITY*delta;
+    if (!body->isGrounded) body->velocity.y -= sv_gravity.value*delta;
 
     if (body->isGrounded && jumpPressed)
     {
-        body->velocity.y = JUMP_FORCE;
+        body->velocity.y = sv_jumpforce.value;
         body->isGrounded = false;
     }
     Vector3 front = { sinf(rot), 0.f, cosf(rot) };
@@ -41,7 +40,7 @@ void UpdateBody(Body *body, float rot, char side, char forward, bool jumpPressed
     // RUNS ON GROUND
     if (body->isGrounded)
     {
-        Vector3 wishveloc = Vector3Scale(body->dir, MAX_SPEED);
+        Vector3 wishveloc = Vector3Scale(body->dir, sv_maxspeed.value);
         float wishspd = Vector3Length(wishveloc);
         wishveloc = Vector3Normalize(wishveloc);
 
@@ -51,12 +50,12 @@ void UpdateBody(Body *body, float rot, char side, char forward, bool jumpPressed
 
         if (speed > 0.001f)
         {
-            float friction = FRICTION;
+            float friction = sv_friction.value;
 
             if (crouchHold)
                 friction *= 2.0f;
 
-            float control = speed < STOPSPEED ? STOPSPEED : speed;
+            float control = speed < sv_stopspeed.value ? sv_stopspeed.value : speed;
 
             float newspeed = speed - delta * control * friction;
 
@@ -79,7 +78,7 @@ void UpdateBody(Body *body, float rot, char side, char forward, bool jumpPressed
 
         if (addSpeed > 0)
         {
-            float accelSpeed = ACCEL * delta * wishspd;
+            float accelSpeed = sv_accel.value * delta * wishspd;
 
             if (accelSpeed > addSpeed)
                 accelSpeed = addSpeed;
@@ -91,7 +90,7 @@ void UpdateBody(Body *body, float rot, char side, char forward, bool jumpPressed
     // RUNS ON AIR
     else {
         // does the same as VectorNormalize() in quake's code base
-        Vector3 wishveloc = Vector3Scale(body->dir, MAX_SPEED);
+        Vector3 wishveloc = Vector3Scale(body->dir, sv_maxspeed.value);
         float wishspd = Vector3Length(wishveloc);
         wishveloc = Vector3Normalize(wishveloc);
 
@@ -105,7 +104,7 @@ void UpdateBody(Body *body, float rot, char side, char forward, bool jumpPressed
         // prevents negative add speed
         if (addSpeed > 0)
         {
-            float accel = AIR_ACCEL * MAX_SPEED * delta;
+            float accel = sv_airaccel.value * sv_maxspeed.value * delta;
 
             if (accel > addSpeed)
                 accel = addSpeed;

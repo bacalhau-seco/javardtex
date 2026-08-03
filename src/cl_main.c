@@ -2,10 +2,9 @@
 #include <stdio.h>
 #include <string.h>
 
-static Vector2 sensitivity = { 0.001f, 0.001f };
 static Body player = { 0 };
 static Vector2 lookRotation = { 0 };
-static float headLerp = STAND_HEIGHT;
+static float headLerp;
 static void DrawLevel(void);
 
 int main(int argc, char *argv[])
@@ -22,26 +21,27 @@ int main(int argc, char *argv[])
     }
 
     // Initialization
-    const int screenWidth = 1024;
-    const int screenHeight = 768;
+    headLerp = sv_standheight.value;
+    const int screenWidth = cl_hres.value;
+    const int screenHeight = cl_vres.value;
     int cx = screenWidth / 2;
     int cy = screenHeight / 2;
 
 
     InitWindow(screenWidth, screenHeight, "engine demo");
 
-    DisableCursor();        // Limit cursor to relative movement inside the window
+    DisableCursor();
 
     Camera camera;
     InitCamera(&camera, &player, headLerp);
 
     // Main game loop
-    while (!WindowShouldClose())    // Detect window close button or ESC key
+    while (!WindowShouldClose())
     {
         InputState in = GetInputState();
 
-        lookRotation.x -= in.mouse.x*sensitivity.x;
-        lookRotation.y += in.mouse.y*sensitivity.y;
+        lookRotation.x -= in.mouse.x*cl_mouseh.value;
+        lookRotation.y += in.mouse.y*cl_mousev.value;
 
         UpdateBody(&player,
                    lookRotation.x,
@@ -51,18 +51,16 @@ int main(int argc, char *argv[])
                    in.crouch);
 
         float delta = GetFrameTime();
-        headLerp = Lerp(headLerp, (in.crouch ? CROUCH_HEIGHT : STAND_HEIGHT), 20.0f*delta);
+        headLerp = Lerp(headLerp, (in.crouch ? sv_crouchheight.value : sv_standheight.value), 20.0f*delta);
         camera.position = (Vector3){
             player.position.x,
-            player.position.y + (BOTTOM_HEIGHT + headLerp),
+            player.position.y + (sv_bottomheight.value + headLerp),
             player.position.z,
         };
 
         Camera_Update(&camera, &player, lookRotation, headLerp);
-        //----------------------------------------------------------------------------------
 
         // Draw
-        //----------------------------------------------------------------------------------
         BeginDrawing();
 
             ClearBackground(RAYWHITE);
@@ -72,7 +70,7 @@ int main(int argc, char *argv[])
             EndMode3D();
 
             // TEMP HUD
-            Vector3 wishveloc = Vector3Scale(player.dir, MAX_SPEED);
+            Vector3 wishveloc = Vector3Scale(player.dir, sv_maxspeed.value);
             float wishspd = Vector3Length(wishveloc);
             Vector3 v = player.velocity;
             Vector3 hvel = { v.x, 0.0f, v.z };

@@ -8,7 +8,7 @@ void Camera_Update(Camera *camera,
 {
     camera->position = (Vector3){
         player->position.x,
-        player->position.y + (BOTTOM_HEIGHT + headLerp),
+        player->position.y + (sv_bottomheight.value + headLerp),
         player->position.z,
     };
 
@@ -37,7 +37,7 @@ void InitCamera(Camera *camera, const Body *player, float headLerp)
     camera->projection = CAMERA_PERSPECTIVE;
     camera->position = (Vector3){
         player->position.x,
-        player->position.y + (BOTTOM_HEIGHT + headLerp),
+        player->position.y + (sv_bottomheight.value + headLerp),
         player->position.z,
     };
 }
