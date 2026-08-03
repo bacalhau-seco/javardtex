@@ -1,5 +1,5 @@
 CC = clang
-TARGET = build/idek
+TARGET = build/javardtex
 
 CFLAGS= -std=c99 -Werror -Iinclude -Wall -Wextra
 CFLAGS2= -std=c99 -Iinclude -Wall -Wextra
