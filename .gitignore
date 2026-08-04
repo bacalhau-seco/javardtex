@@ -1,9 +1,9 @@
-/build/
+build/
 
-/lib/libraylib.a
+lib/libraylib.a
 
-/include/raylib.h
-/include/raymath.h
-/include/rlgl.h
-/include/rcamera.h
-/include/rgestures.h
+include/raylib.h
+include/raymath.h
+include/rlgl.h
+include/rcamera.h
+include/rgestures.h
