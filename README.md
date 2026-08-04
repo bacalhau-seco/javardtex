@@ -1,7 +1,7 @@
 # JavardTex
 pronounced javard-tech (tex derives from the greek "τέχνη" which means craft or skill).
 
-## How to compile
+## Build Instructions
 
 ## Linux
 ```sh
