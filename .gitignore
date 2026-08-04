@@ -7,3 +7,5 @@ include/raymath.h
 include/rlgl.h
 include/rcamera.h
 include/rgestures.h
+
+external/
