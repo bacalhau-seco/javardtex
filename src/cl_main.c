@@ -1,6 +1,7 @@
 #include "../include/defs.h"
 #include <stdio.h>
 #include <string.h>
+#include <dirent.h>
 
 static Body player = { 0 };
 static Vector2 lookRotation = { 0 };
@@ -12,10 +13,19 @@ int main(int argc, char *argv[])
     if (argc > 1)
     {
         if (strcmp(argv[1], "-game") == 0) {
-            printf("game selected: %s\n", argv[2]);
+            DIR* dir = opendir(argv[2]);
+            if (dir) {
+                printf("game selected: %s\n", argv[2]);
+                closedir(dir);
+            }
+            else {
+                printf("game doesn't exist\n");
+                // return 0;
+            }
         }
         else {
-            printf("no argument defined");
+            printf("no game defined\n");
+            // return 0;
         }
 
     }
@@ -104,10 +114,7 @@ int main(int argc, char *argv[])
         //----------------------------------------------------------------------------------
     }
 
-    // De-Initialization
-    //--------------------------------------------------------------------------------------
-    CloseWindow();        // Close window and OpenGL context
-    //--------------------------------------------------------------------------------------
+    CloseWindow();
 
     return 0;
 }
