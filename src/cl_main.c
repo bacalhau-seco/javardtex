@@ -27,7 +27,6 @@ int main(int argc, char *argv[])
             printf("no game defined\n");
             // return 0;
         }
-
     }
 
     // Initialization
@@ -35,7 +34,8 @@ int main(int argc, char *argv[])
     const int screenWidth = cl_hres.value;
     const int screenHeight = cl_vres.value;
 
-    InitWindow(screenWidth, screenHeight, "engine demo");
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
+    InitWindow(screenWidth, screenHeight, "javardtex");
 
     DisableCursor();
 
