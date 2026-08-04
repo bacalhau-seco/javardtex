@@ -37,4 +37,7 @@ raylib:
 	cp $(RAYLIB_DIR)/libraylib.a lib/
 
 clean:
+	$(MAKE) -C $(RAYLIB_DIR) clean
 	rm -f $(TARGET)
+	rm -f lib/libraylib.a
+	rm -f $(patsubst $(RAYLIB_DIR)/%,include/%,$(HEADERS))

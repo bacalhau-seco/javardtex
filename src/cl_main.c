@@ -34,9 +34,6 @@ int main(int argc, char *argv[])
     headLerp = sv_standheight.value;
     const int screenWidth = cl_hres.value;
     const int screenHeight = cl_vres.value;
-    int cx = screenWidth / 2;
-    int cy = screenHeight / 2;
-
 
     InitWindow(screenWidth, screenHeight, "engine demo");
 
@@ -72,44 +69,10 @@ int main(int argc, char *argv[])
 
         // Draw
         BeginDrawing();
-
             ClearBackground(RAYWHITE);
-
             BeginMode3D(camera);
                 DrawLevel();
             EndMode3D();
-
-            // TEMP HUD
-            Vector3 wishveloc = Vector3Scale(player.dir, sv_maxspeed.value);
-            float wishspd = Vector3Length(wishveloc);
-            Vector3 v = player.velocity;
-            Vector3 hvel = { v.x, 0.0f, v.z };
-            float speed = Vector3Length(hvel);
-
-            DrawRectangle(5, 90, 330, 105, Fade(DARKGRAY, 0.4f));
-            DrawRectangleLines(5, 90, 330, 105, DARKGRAY);
-
-            DrawText(TextFormat("Speed: %.2f", speed), 15, 100, 10, RAYWHITE);
-            DrawText(TextFormat("WishSpeed: %.2f", wishspd), 15, 115, 10, RAYWHITE);
-            DrawText(TextFormat("Vel Y: %.2f", v.y), 15, 130, 10, RAYWHITE);
-            DrawText(TextFormat("Grounded: %s", player.isGrounded ? "yes" : "no"),
-                15, 145, 10, RAYWHITE);
-
-            DrawText(TextFormat("WishDir: (%.2f, %.2f, %.2f)",
-                player.dir.x, player.dir.y, player.dir.z),
-                15, 160, 10, RAYWHITE);
-            int size = 6;
-            int gap = 3;
-            int thickness = 2;
-
-            // horizontal
-            DrawLineEx((Vector2){ cx - size - gap, cy }, (Vector2){ cx - gap, cy }, thickness, GREEN);
-            DrawLineEx((Vector2){ cx + gap, cy }, (Vector2){ cx + size + gap, cy }, thickness, GREEN);
-
-            // vertical
-            DrawLineEx((Vector2){ cx, cy - size - gap }, (Vector2){ cx, cy - gap }, thickness, GREEN);
-            DrawLineEx((Vector2){ cx, cy + gap }, (Vector2){ cx, cy + size + gap }, thickness, GREEN);      
-
         EndDrawing();
         //----------------------------------------------------------------------------------
     }
