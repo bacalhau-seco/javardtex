@@ -1,6 +1,15 @@
 # JavardTex
 pronounced javard-tech (tex derives from the greek "τέχνη" which means craft or skill).
 
+## How to compile
+
+## Linux
+```sh
+git clone --recurse-submodules https://github.com/bacalhau-seco/javardtex.git
+cd javardtex
+make
+```
+
 ## Contributing
 The project is mainly worked on plain git (not github) to contribute you can create a patch and email me (bacalhau@based.pt).
 Also check TODO.md where you can see the development plan
