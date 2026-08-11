@@ -9,6 +9,10 @@ Required features:
 - Texture loading from WAD3 files
 - Entity system
 - Lua scripting for entities and game logic
+- Multiplayer networking
+- Multiplayer Text chat
+- Multiplayer voice chat
+- Diferent Material Propreties
 - Skeletal animations
 - Particle system
 - glTF 2.0 loading
@@ -18,13 +22,8 @@ Required features:
 - Export game as a single binary
 
 Other features, not required for final release include:
-- Multiplayer networking
-- Multiplayer Text chat
-- Multiplayer voice chat
-- Diferent Material Propreties
 - Planar Reflections (for materials)
 - Destructible enviornments (as brush entities)
-- Box3d physics
 - AI mesh navigation
 - Decals (blood splater, grafitty, bullet holes...)
 - Gore
@@ -34,6 +33,8 @@ Other features, not required for final release include:
 - LUA api Documentation
 - WAD3 creation software
 - Tech demo with all engine features
+- Server
+- Client
 
 ## Constraints
 - minimal dependencies
@@ -67,8 +68,7 @@ For each game then there is a diferent file structure:
 │   │   ├── sounds/
 │   │   ├── wad/
 │   │   ├── game.lua
-│   │   ├── game.fgd
-│   │   └── game.toml
+│   │   └── game.fgd
 
 ## Quality
 Quality is ensured by always compiling with `-Werror`, `-Wall` and `-Wextra`.
@@ -80,13 +80,6 @@ Each patch should solve a single problem, making review easier and helping maint
 ## Timeline
 The timeline includes only required features, non required features may be added when time is available if the planned required features have been added.
 
-### overtime
-Things that must happen every month:
-- Optimization
-- Bug fixing
-- Documentation
-- Testing
-
 ### July 2026
 - Repository structure
 - Core engine architecture
@@ -96,23 +89,24 @@ Things that must happen every month:
 
 ### August 2026
 - Game parsing
-- BSP30 parser
-- WAD3 loader
+- Lua integration
 - Cvars
+- Start developing server
 
 ### September 2026
+- BSP30 parser
+- WAD3 loader
 - WAD3 creation tool
 - BSP30 rendering
 - Collision detection
 
 ### October 2026
-- Entities
 - Developer console
 - Basic game loading
 - TrenchBroom FGD
 
 ### November 2026
-- Lua integration
+- Entities
 - Lua entity API
 - Trigger entities
 
@@ -121,6 +115,7 @@ Things that must happen every month:
 - items
 - weapons
 - events
+- triggers
 
 ### January 2027
 - Particle system
