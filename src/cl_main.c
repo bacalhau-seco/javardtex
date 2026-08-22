@@ -28,7 +28,7 @@ int main(void)
 
         float delta = GetFrameTime();
 
-        UpdateBody(&player, lookRotation.x, in.side, in.forward, in.jump, in.crouch, delta);
+        UpdatePlayer(&player, lookRotation.x, in.side, in.forward, in.jump, in.crouch, delta);
 
         headLerp = Lerp(
             headLerp,

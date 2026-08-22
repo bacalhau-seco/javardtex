@@ -14,7 +14,7 @@ void Body_OnLand(Body *body)
 }
 
 // Update body considering current world state
-void UpdateBody(Body *body, float rot, char side, char forward, bool jumpPressed, bool crouchHold, float delta)
+void UpdatePlayer(Body *body, float rot, char side, char forward, bool jumpPressed, bool crouchHold, float delta)
 {
     Vector2 input = (Vector2){ (float)side, (float)-forward }; // side = horizontal input / forward = vertical input
     if ((side != 0) && (forward != 0)) input = Vector2Normalize(input); // normalizes input
