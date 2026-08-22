@@ -188,8 +188,8 @@ The same game executable should be usable as a client or dedicated server.
 
 Focus: define and load a game.
 
-* [ ] Clean up the current core/client separation
-* [ ] Remove unnecessary `cl_` prefixes from shared systems
+* [x] Clean up the current core/client separation
+* [x] Remove unnecessary `cl_` prefixes from shared systems
 * [x] Game directory loading
 * [ ] Load `game.lua`
 * [ ] Game metadata
