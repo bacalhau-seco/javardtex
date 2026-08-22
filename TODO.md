@@ -190,13 +190,13 @@ Focus: define and load a game.
 
 * [ ] Clean up the current core/client separation
 * [ ] Remove unnecessary `cl_` prefixes from shared systems
-* [ ] Game directory loading
+* [x] Game directory loading
 * [ ] Load `game.lua`
 * [ ] Game metadata
 * [ ] Game title
 * [ ] Game version
 * [ ] Basic Lua integration
-* [ ] Define initial Cvars
+* [x] Define initial Cvars
 * [ ] Basic title screen
 * [ ] Initial server structure
 
