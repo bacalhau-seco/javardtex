@@ -8,7 +8,7 @@ The engine is server-authoritative. The same server code is used for local games
 
 The client can either connect to a local server started by the engine or connect to a remote server.
 
-Games are defined and extended through Lua.
+Games are defined through C and engine configuration. The engine is designed specifically for Quake/Half-Life-style FPS games rather than arbitrary game types.
 
 The initial goal is to provide a solid engine for Quake/Half-Life-style FPS games. Multiplayer should be a natural extension of the server rather than a separate game mode.
 
@@ -18,8 +18,6 @@ The initial goal is to provide a solid engine for Quake/Half-Life-style FPS game
 * BSP30 collision detection
 * WAD3 loading
 * Entity system
-* Lua scripting
-* Lua API for game logic and entities
 * Cvars
 * Developer console
 * Server-authoritative networking
@@ -50,7 +48,7 @@ The engine is one executable with different runtime modes.
 Normal launch:
 
 ```
-javardtex game
+javardtex
 ```
 
 Starts both a local server and a client.
@@ -58,7 +56,7 @@ Starts both a local server and a client.
 Remote server:
 
 ```
-javardtex game --connect <address>
+javardtex --connect <address>
 ```
 
 Starts only the client and connects to a remote server.
@@ -66,7 +64,7 @@ Starts only the client and connects to a remote server.
 Dedicated server:
 
 ```
-javardtex game --server
+javardtex --server
 ```
 
 Starts only the server.
@@ -77,13 +75,30 @@ The difference between local and multiplayer is therefore where the server is ru
 
 ## Engine Structure
 
-Shared engine code should not be tied to the client or server.
+The project uses a simple C source structure.
+
+```
+JavardTex/
+├── src/
+├── include/
+├── assets/
+├── Makefile
+└── README.md
+```
+
+C source files are stored in `src/`.
+
+Headers are stored in `include/`.
+
+Game assets are stored in `assets/`.
+
+The engine should remain divided conceptually into shared, client, server and game code without unnecessary separation into libraries or plugins.
 
 Client-specific code uses the `cl_` prefix.
 
 Server-specific code uses the `sv_` prefix.
 
-Shared gameplay and engine systems should have no prefix.
+Shared engine and gameplay systems have no prefix.
 
 The client is responsible for:
 
@@ -99,8 +114,7 @@ The server is responsible for:
 * Game logic
 * Entities
 * Physics
-* Server-side Lua
-* Authoritative decisions
+* Server-authoritative decisions
 
 Shared systems may be used by both sides when appropriate.
 
@@ -108,36 +122,27 @@ Client-side prediction may run shared simulation code locally, but the server re
 
 ## Games
 
-Each game has its own directory.
+Games are implemented directly in C and compiled into the engine.
 
-```
-games/
-└── example/
-    ├── maps/
-    ├── models/
-    ├── textures/
-    ├── sounds/
-    ├── wad/
-    ├── scripts/
-    ├── game.lua
-    └── game.fgd
-```
+The engine is designed around a common FPS gameplay model so that creating another game primarily requires changing:
 
-`game.lua` defines the game and contains information such as:
+* Game name
+* Game version
+* Assets
+* Maps
+* Game configuration
 
-* Title
-* Version
-* Game settings
-* Game-specific Cvars
-* Lua initialization
+Game-specific code can be changed when different gameplay behaviour is required.
 
-The engine provides the Lua API used by games.
+The example game is shipped with JavardTex and serves as the primary demonstration and test game.
+
+The game should be identifiable by its game ID, version and build.
 
 ## Cvars
 
 Cvars are part of the core engine.
 
-Games can define Cvars through Lua.
+Games can define game-specific Cvars through C code.
 
 Selected Cvars can be exposed to server administrators through server configuration.
 
@@ -168,19 +173,20 @@ Networking should be developed incrementally. A complete multiplayer system is n
 
 ## Build and Distribution
 
-The engine should eventually produce a self-contained game executable.
+The engine and game are compiled into a single executable.
 
 The exported game should contain the required:
 
 * Engine
-* Game scripts
-* Lua scripts
+* Game code
 * Assets
 * Game metadata
 
-A game should be identifiable by its game ID, version and build.
+The example game is shipped with the engine.
 
 The same game executable should be usable as a client or dedicated server.
+
+Game packaging should allow the engine to identify the game by its game ID, version and build.
 
 ## Development Roadmap
 
@@ -191,16 +197,16 @@ Focus: define and load a game.
 * [x] Clean up the current core/client separation
 * [x] Remove unnecessary `cl_` prefixes from shared systems
 * [x] Game directory loading
-* [ ] Load `game.lua`
+* [ ] Game definition
 * [ ] Game metadata
+* [ ] Game ID
 * [ ] Game title
 * [ ] Game version
-* [ ] Basic Lua integration
-* [x] Define initial Cvars
+* [ ] Basic game configuration
 * [ ] Basic title screen
 * [ ] Initial server structure
 
-**Goal:** A game can be defined with `game.lua` and launched to a basic title screen.
+**Goal:** A game can be defined and launched to a basic title screen.
 
 ### September 2026 — Server Runtime
 
@@ -220,7 +226,7 @@ Focus: make the server actually run the game.
 
 **Goal:** Launch a game, start a local server and play inside a BSP map.
 
-No server browser or player-vs-player testing is required yet.
+No server browser required yet.
 
 ### October 2026 — World and Entities
 
@@ -237,21 +243,20 @@ Focus: build the basic world framework.
 
 **Goal:** BSP maps can contain and interact with basic engine entities.
 
-### November 2026 — Lua API
+### November 2026 — Game Logic
 
-Focus: make the engine programmable.
+Focus: build the core FPS gameplay.
 
-* [ ] Lua game API
-* [ ] Lua entity API
-* [ ] Server-side Lua
-* [ ] Client-side Lua
-* [ ] Lua events
-* [ ] Lua-controlled entities
+* [ ] Player gameplay
+* [ ] Weapons
+* [ ] Damage system
+* [ ] Enemy entities
+* [ ] Enemy AI
 * [ ] Game rules
-* [ ] Server configuration through Cvars
-* [ ] Initial Lua API documentation
+* [ ] Game-specific Cvars
+* [ ] Game entity definitions
 
-**Goal:** A developer can create basic game logic without modifying the engine.
+**Goal:** A developer can create a complete basic FPS game using the engine's C game systems.
 
 ### December 2026 — Core Networking
 
@@ -279,6 +284,7 @@ Focus: make multiplayer technically viable.
 * [ ] Entity interpolation
 * [ ] Network error handling
 * [ ] Basic multiplayer testing
+* [ ] Multiplayer text chat
 
 **Goal:** Multiple clients can exist in the same game world with responsive movement.
 
@@ -297,7 +303,7 @@ If networking is behind schedule, use this month to finish it first.
 
 ### March 2027 — Models and Animation
 
-* [ ] glTF 2.0 loader
+* [ ] glTF 2.0 loading
 * [ ] Static model rendering
 * [ ] Skeletal animations
 * [ ] Character rendering
@@ -308,12 +314,12 @@ If networking is behind schedule, use this month to finish it first.
 Focus: make the engine usable for actual game development.
 
 * [ ] Developer console
-* [ ] Lua API documentation
 * [ ] Dedicated server improvements
 * [ ] Performance profiling
 * [ ] Memory improvements
 * [ ] Bug fixing
 * [ ] Stability improvements
+* [ ] Example game improvements
 
 Optional features may be started if the required features are complete.
 
@@ -357,11 +363,11 @@ Focus: prepare the engine for release.
 
 JavardTex 1.0 should provide a stable engine capable of running FPS games with:
 
-* Lua-defined games
+* C-defined games
 * BSP30 maps
 * WAD3 textures
 * Entities
-* Lua game logic
+* C game logic
 * Cvars
 * A local server
 * Remote servers
@@ -369,3 +375,4 @@ JavardTex 1.0 should provide a stable engine capable of running FPS games with:
 * Client-side prediction
 * Dedicated servers
 * Game packaging/export
+* A shipped example game
