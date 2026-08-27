@@ -7,4 +7,6 @@
 #include "input.h"
 #include "camera.h"
 
+#include "game.h"
+
 #include "cvar.h"

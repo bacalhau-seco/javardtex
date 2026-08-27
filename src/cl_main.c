@@ -3,6 +3,7 @@
 static Body player = { 0 };
 static Vector2 lookRotation = { 0 };
 static float headLerp;
+static GameState gameState = GAME_STATE_TITLE;
 
 int main(void)
 {
@@ -22,30 +23,59 @@ int main(void)
     while (!WindowShouldClose())
     {
         InputState in = GetInputState();
-
-        lookRotation.x -= in.mouse.x * cl_mouseh.value;
-        lookRotation.y += in.mouse.y * cl_mousev.value;
-
         float delta = GetFrameTime();
 
-        UpdatePlayer(&player, lookRotation.x, in.side, in.forward, in.jump, in.crouch, delta);
+        switch (gameState)
+        {
+        case GAME_STATE_TITLE:
+            break;
 
-        headLerp = Lerp(
-            headLerp,
-            in.crouch ? sv_crouchheight.value : sv_standheight.value,
-            20.0f * delta
-        );
+        case GAME_STATE_PAUSE:
+            break;
 
-        camera.position = (Vector3){
-            player.position.x,
-            player.position.y + (sv_bottomheight.value + headLerp),
-            player.position.z
-        };
+        case GAME_STATE_MENU:
+            break;
 
-        Camera_Update(&camera, &player, lookRotation, headLerp);
+        case GAME_STATE_GAME:
+            lookRotation.x -= in.mouse.x * cl_mouseh.value;
+            lookRotation.y += in.mouse.y * cl_mousev.value;
+
+            UpdatePlayer(&player, lookRotation.x, in.side, in.forward, in.jump, in.crouch, delta);
+
+            headLerp = Lerp(
+                headLerp,
+                in.crouch ? sv_crouchheight.value : sv_standheight.value,
+                20.0f * delta
+            );
+
+            camera.position = (Vector3){
+                player.position.x,
+                player.position.y + (sv_bottomheight.value + headLerp),
+                player.position.z
+            };
+
+            Camera_Update(&camera, &player, lookRotation, headLerp);
+            break;
+        }
 
         BeginDrawing();
             ClearBackground(RAYWHITE);
+
+            switch (gameState)
+            {
+            case GAME_STATE_TITLE:
+                break;
+
+            case GAME_STATE_PAUSE:
+                break;
+
+            case GAME_STATE_MENU:
+                break;
+
+            case GAME_STATE_GAME:
+                break;
+            }
+
         EndDrawing();
     }
 
