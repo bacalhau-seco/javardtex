@@ -12,4 +12,6 @@ typedef enum {
     GAME_STATE_PAUSE
 } GameState;
 
+extern GameState gameState;
+
 #endif

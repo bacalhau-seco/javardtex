@@ -1,9 +1,11 @@
 #include "../include/defs.h"
+#include "../include/title.h"
 
 static Body player = { 0 };
 static Vector2 lookRotation = { 0 };
 static float headLerp;
-static GameState gameState = GAME_STATE_TITLE;
+GameState gameState = GAME_STATE_TITLE;
+static GameState oldGameState = GAME_STATE_TITLE;
 
 int main(void)
 {
@@ -15,13 +17,28 @@ int main(void)
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(screenWidth, screenHeight, "javardtex");
 
-    DisableCursor();
-
     Camera camera;
     InitCamera(&camera, &player, headLerp);
 
     while (!WindowShouldClose())
     {
+        if (gameState != oldGameState)
+        {
+            switch (gameState)
+            {
+            case GAME_STATE_TITLE:
+            case GAME_STATE_MENU:
+            case GAME_STATE_PAUSE:
+                EnableCursor();
+                break;
+
+            case GAME_STATE_GAME:
+                DisableCursor();
+                break;
+            }
+
+            oldGameState = gameState;
+        }
         InputState in = GetInputState();
         float delta = GetFrameTime();
 
@@ -64,6 +81,7 @@ int main(void)
             switch (gameState)
             {
             case GAME_STATE_TITLE:
+                CL_Title();
                 break;
 
             case GAME_STATE_PAUSE:
