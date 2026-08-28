@@ -197,13 +197,13 @@ Focus: define and load a game.
 * [x] Clean up the current core/client separation
 * [x] Remove unnecessary `cl_` prefixes from shared systems
 * [x] Game directory loading
-* [ ] Game definition
-* [ ] Game metadata
+* [x] Game definition
+* [x] Game metadata
 * [ ] Game ID
-* [ ] Game title
-* [ ] Game version
+* [x] Game title
+* [x] Game version
 * [ ] Basic game configuration
-* [ ] Basic title screen
+* [x] Basic title screen
 * [ ] Initial server structure
 
 **Goal:** A game can be defined and launched to a basic title screen.
