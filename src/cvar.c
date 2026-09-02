@@ -1,91 +1,86 @@
 #include "../include/cvar.h"
 
-Cvar cl_fov = {
-    .name = "cl_fov",
-    .value = 90.0f
-};
+#include <stdint.h>
+#include <string.h>
 
-Cvar cl_mouseh = {
-    .name = "cl_mouseh",
-    .value = 0.001f
-};
+#define CVAR_MAX 256
 
-Cvar cl_mousev = {
-    .name = "cl_mousev",
-    .value = 0.001f
-};
+static Cvar cvars[CVAR_MAX];
+static int cvar_used[CVAR_MAX];
 
-Cvar cl_maxfps = {
-    .name = "cl_maxfps",
-    .value = 90.0f
-};
+static uint32_t Cvar_Hash(const char *str)
+{
+    uint32_t hash = 2166136261u;
 
-Cvar cl_hres = {
-    .name = "cl_hres",
-    .value = 1280
-};
+    while (*str)
+    {
+        hash ^= (unsigned char)*str++;
+        hash *= 16777619u;
+    }
 
-Cvar cl_vres = {
-    .name = "cl_vres",
-    .value = 960
-};
+    return hash;
+}
 
-Cvar sv_gravity = {
-    .name = "sv_gravity",
-    .value = 800.0f
-};
+Cvar *Cvar_Register(const char *name, float value)
+{
+    uint32_t index = Cvar_Hash(name) % CVAR_MAX;
 
-Cvar sv_maxspeed = {
-    .name = "sv_maxspeed",
-    .value = 290.0f
-};
+    for (int i = 0; i < CVAR_MAX; i++)
+    {
+        uint32_t pos = (index + i) % CVAR_MAX;
 
-Cvar sv_jumpforce = {
-    .name = "sv_jumpforce",
-    .value = 270.0f
-};
+        if (!cvar_used[pos])
+        {
+            cvars[pos].name = name;
+            cvars[pos].value = value;
+            cvar_used[pos] = 1;
 
-Cvar sv_friction = {
-    .name = "sv_friction",
-    .value = 4.0f
-};
+            return &cvars[pos];
+        }
 
-Cvar sv_stopspeed = {
-    .name = "sv_stopspeed",
-    .value = 100.0f
-};
+        if (!strcmp(cvars[pos].name, name))
+            return &cvars[pos];
+    }
 
-Cvar sv_standheight = {
-    .name = "sv_standheight",
-    .value = 56.0f
-};
+    return NULL;
+}
 
-Cvar sv_bottomheight = {
-    .name = "sv_bottomheight",
-    .value = 32.0f
-};
+Cvar *Cvar_Get(const char *name)
+{
+    uint32_t index = Cvar_Hash(name) % CVAR_MAX;
 
-Cvar sv_crouchheight = {
-    .name = "sv_crouchheight",
-    .value = 32.0f
-};
+    for (int i = 0; i < CVAR_MAX; i++)
+    {
+        uint32_t pos = (index + i) % CVAR_MAX;
 
-Cvar sv_accel = {
-    .name = "sv_accel",
-    .value = 5.0f
-};
+        if (!cvar_used[pos])
+            return NULL;
 
-Cvar sv_airaccel = {
-    .name = "sv_airaccel",
-    .value = 10.0f
-};
+        if (!strcmp(cvars[pos].name, name))
+            return &cvars[pos];
+    }
 
-Cvar sv_jumppenalty = {
-    .name = "sv_jumppenalty",
-    .value = 0.0f
-};
+    return NULL;
+}
 
 void Cvar_Init(void)
 {
-    // register cvars here
+    Cvar_Register("cl_fov", 90.0f);
+    Cvar_Register("cl_mouseh", 0.001f);
+    Cvar_Register("cl_mousev", 0.001f);
+    Cvar_Register("cl_maxfps", 90.0f);
+    Cvar_Register("cl_hres", 1280.0f);
+    Cvar_Register("cl_vres", 960.0f);
+
+    Cvar_Register("sv_gravity", 800.0f);
+    Cvar_Register("sv_maxspeed", 290.0f);
+    Cvar_Register("sv_jumpforce", 270.0f);
+    Cvar_Register("sv_friction", 4.0f);
+    Cvar_Register("sv_stopspeed", 100.0f);
+    Cvar_Register("sv_standheight", 56.0f);
+    Cvar_Register("sv_bottomheight", 32.0f);
+    Cvar_Register("sv_crouchheight", 32.0f);
+    Cvar_Register("sv_accel", 5.0f);
+    Cvar_Register("sv_airaccel", 10.0f);
+    Cvar_Register("sv_jumppenalty", 0.0f);
 }

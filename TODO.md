@@ -199,12 +199,11 @@ Focus: define and load a game.
 * [x] Game directory loading
 * [x] Game definition
 * [x] Game metadata
-* [ ] Game ID
 * [x] Game title
 * [x] Game version
-* [ ] Basic game configuration
+* [x] Basic game configuration
 * [x] Basic title screen
-* [ ] Initial server structure
+* [x] Initial server structure
 
 **Goal:** A game can be defined and launched to a basic title screen.
 
