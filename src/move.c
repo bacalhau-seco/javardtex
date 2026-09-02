@@ -4,9 +4,10 @@ void Body_OnLand(Body *body)
 {
     Vector3 hvel = {.x=body->velocity.x, .y=0.0f, .z=body->velocity.z};
     float speed = Vector3Length(hvel);
-    if (speed > sv_jumppenalty.value)
+    
+    if (speed > Cvar_Get("sv_jumppenalty")->value)
     {
-        hvel = Vector3Scale(hvel, (speed - sv_jumppenalty.value) / speed);
+        hvel = Vector3Scale(hvel, (speed - Cvar_Get("sv_jumppenalty")->value) / speed);
 
         body->velocity.x = hvel.x;
         body->velocity.z = hvel.z;
@@ -16,20 +17,27 @@ void Body_OnLand(Body *body)
 // Update body considering current world state
 void UpdatePlayer(Body *body, float rot, char side, char forward, bool jumpPressed, bool crouchHold, float delta)
 {
-    Vector2 input = (Vector2){ (float)side, (float)-forward }; // side = horizontal input / forward = vertical input
-    if ((side != 0) && (forward != 0)) input = Vector2Normalize(input); // normalizes input
+    Vector2 input = (Vector2){ (float)side, (float)-forward };
+    if ((side != 0) && (forward != 0)) input = Vector2Normalize(input);
 
-    if (!body->isGrounded) body->velocity.y -= sv_gravity.value*delta;
+    if (!body->isGrounded)
+        body->velocity.y -= Cvar_Get("sv_gravity")->value * delta;
 
     if (body->isGrounded && jumpPressed)
     {
-        body->velocity.y = sv_jumpforce.value;
+        body->velocity.y = Cvar_Get("sv_jumpforce")->value;
         body->isGrounded = false;
     }
+
     Vector3 front = { sinf(rot), 0.f, cosf(rot) };
     Vector3 right = { cosf(rot), 0.f, -sinf(rot) };
 
-    Vector3 wishDir = (Vector3){ input.x*right.x + input.y*front.x, 0.0f, input.x*right.z + input.y*front.z, }; // essentially "wishDir" from quake
+    Vector3 wishDir = (Vector3){
+        input.x * right.x + input.y * front.x,
+        0.0f,
+        input.x * right.z + input.y * front.z,
+    };
+
     wishDir = Vector3Normalize(wishDir);
     body->dir = wishDir;
     
@@ -38,22 +46,23 @@ void UpdatePlayer(Body *body, float rot, char side, char forward, bool jumpPress
     // RUNS ON GROUND
     if (body->isGrounded)
     {
-        Vector3 wishveloc = Vector3Scale(body->dir, sv_maxspeed.value);
+        Vector3 wishveloc = Vector3Scale(body->dir, Cvar_Get("sv_maxspeed")->value);
         float wishspd = Vector3Length(wishveloc);
         wishveloc = Vector3Normalize(wishveloc);
-
 
         // FRICTION
         float speed = Vector3Length(hvel);
 
         if (speed > 0.001f)
         {
-            float friction = sv_friction.value;
+            float friction = Cvar_Get("sv_friction")->value;
 
             if (crouchHold)
                 friction *= 2.0f;
 
-            float control = speed < sv_stopspeed.value ? sv_stopspeed.value : speed;
+            float control = speed < Cvar_Get("sv_stopspeed")->value
+                ? Cvar_Get("sv_stopspeed")->value
+                : speed;
 
             float newspeed = speed - delta * control * friction;
 
@@ -66,7 +75,6 @@ void UpdatePlayer(Body *body, float rot, char side, char forward, bool jumpPress
             body->velocity.z *= scale;
         }
 
-
         // ACCELERATION
         hvel = (Vector3){ body->velocity.x, 0.0f, body->velocity.z };
 
@@ -76,7 +84,7 @@ void UpdatePlayer(Body *body, float rot, char side, char forward, bool jumpPress
 
         if (addSpeed > 0)
         {
-            float accelSpeed = sv_accel.value * delta * wishspd;
+            float accelSpeed = Cvar_Get("sv_accel")->value * delta * wishspd;
 
             if (accelSpeed > addSpeed)
                 accelSpeed = addSpeed;
@@ -86,9 +94,9 @@ void UpdatePlayer(Body *body, float rot, char side, char forward, bool jumpPress
         }
     }
     // RUNS ON AIR
-    else {
-        // does the same as VectorNormalize() in quake's code base
-        Vector3 wishveloc = Vector3Scale(body->dir, sv_maxspeed.value);
+    else
+    {
+        Vector3 wishveloc = Vector3Scale(body->dir, Cvar_Get("sv_maxspeed")->value);
         float wishspd = Vector3Length(wishveloc);
         wishveloc = Vector3Normalize(wishveloc);
 
@@ -99,10 +107,10 @@ void UpdatePlayer(Body *body, float rot, char side, char forward, bool jumpPress
         float currentSpeed = Vector3DotProduct(hvel, wishveloc);
         float addSpeed = wishspd - currentSpeed;
 
-        // prevents negative add speed
         if (addSpeed > 0)
         {
-            float accel = sv_airaccel.value * sv_maxspeed.value * delta;
+            float accel = Cvar_Get("sv_airaccel")->value
+                * Cvar_Get("sv_maxspeed")->value * delta;
 
             if (accel > addSpeed)
                 accel = addSpeed;
@@ -114,6 +122,7 @@ void UpdatePlayer(Body *body, float rot, char side, char forward, bool jumpPress
         body->velocity.x = hvel.x;
         body->velocity.z = hvel.z;
     }
+
     body->position.x += body->velocity.x * delta;
     body->position.y += body->velocity.y * delta;
     body->position.z += body->velocity.z * delta;

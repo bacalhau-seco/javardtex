@@ -8,7 +8,7 @@ void Camera_Update(Camera *camera,
 {
     camera->position = (Vector3){
         player->position.x,
-        player->position.y + (sv_bottomheight.value + headLerp),
+        player->position.y + (Cvar_Get("sv_bottomheight")->value + headLerp),
         player->position.z,
     };
 
@@ -33,11 +33,11 @@ void InitCamera(Camera *camera, const Body *player, float headLerp)
 {
     *camera = (Camera){0};
 
-    camera->fovy = cl_fov.value;
+    camera->fovy = Cvar_Get("cl_fov")->value;
     camera->projection = CAMERA_PERSPECTIVE;
     camera->position = (Vector3){
         player->position.x,
-        player->position.y + (sv_bottomheight.value + headLerp),
+        player->position.y + (Cvar_Get("sv_bottomheight")->value + headLerp),
         player->position.z,
     };
 }

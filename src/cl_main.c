@@ -9,10 +9,11 @@ static GameState oldGameState = GAME_STATE_TITLE;
 
 int main(void)
 {
-    headLerp = sv_standheight.value;
+    Cvar_Init();
+    headLerp = Cvar_Get("sv_standheight")->value;
 
-    const int screenWidth = cl_hres.value;
-    const int screenHeight = cl_vres.value;
+    const int screenWidth = Cvar_Get("cl_hres")->value;
+    const int screenHeight = Cvar_Get("cl_vres")->value;
 
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(screenWidth, screenHeight, "javardtex");
@@ -39,6 +40,7 @@ int main(void)
 
             oldGameState = gameState;
         }
+
         InputState in = GetInputState();
         float delta = GetFrameTime();
 
@@ -54,20 +56,30 @@ int main(void)
             break;
 
         case GAME_STATE_GAME:
-            lookRotation.x -= in.mouse.x * cl_mouseh.value;
-            lookRotation.y += in.mouse.y * cl_mousev.value;
+            lookRotation.x -= in.mouse.x * Cvar_Get("cl_mouseh")->value;
+            lookRotation.y += in.mouse.y * Cvar_Get("cl_mousev")->value;
 
-            UpdatePlayer(&player, lookRotation.x, in.side, in.forward, in.jump, in.crouch, delta);
+            UpdatePlayer(
+                &player,
+                lookRotation.x,
+                in.side,
+                in.forward,
+                in.jump,
+                in.crouch,
+                delta
+            );
 
             headLerp = Lerp(
                 headLerp,
-                in.crouch ? sv_crouchheight.value : sv_standheight.value,
+                in.crouch
+                    ? Cvar_Get("sv_crouchheight")->value
+                    : Cvar_Get("sv_standheight")->value,
                 20.0f * delta
             );
 
             camera.position = (Vector3){
                 player.position.x,
-                player.position.y + (sv_bottomheight.value + headLerp),
+                player.position.y + (Cvar_Get("sv_bottomheight")->value + headLerp),
                 player.position.z
             };
 

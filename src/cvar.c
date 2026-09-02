@@ -68,9 +68,9 @@ void Cvar_Init(void)
     Cvar_Register("cl_fov", 90.0f);
     Cvar_Register("cl_mouseh", 0.001f);
     Cvar_Register("cl_mousev", 0.001f);
-    Cvar_Register("cl_maxfps", 90.0f);
-    Cvar_Register("cl_hres", 1280.0f);
-    Cvar_Register("cl_vres", 960.0f);
+    Cvar_Register("cl_maxfps", 90);
+    Cvar_Register("cl_hres", 1280);
+    Cvar_Register("cl_vres", 960);
 
     Cvar_Register("sv_gravity", 800.0f);
     Cvar_Register("sv_maxspeed", 290.0f);
@@ -83,4 +83,5 @@ void Cvar_Init(void)
     Cvar_Register("sv_accel", 5.0f);
     Cvar_Register("sv_airaccel", 10.0f);
     Cvar_Register("sv_jumppenalty", 0.0f);
+    Cvar_Register("sv_tickrate", 128);
 }
