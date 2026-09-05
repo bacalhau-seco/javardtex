@@ -1,7 +1,9 @@
 #include "../include/defs.h"
 #include "../include/title.h"
+#include "../include/bsp.h"
 
 static Body player = { 0 };
+static BSP_Map bsp = { 0 };
 static Vector2 lookRotation = { 0 };
 static float headLerp;
 GameState gameState = GAME_STATE_TITLE;
@@ -17,6 +19,19 @@ int main(void)
 
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(screenWidth, screenHeight, "javardtex");
+
+    if (!BSP_Load(&bsp, "maps/test.bsp"))
+    {
+        CloseWindow();
+        return 1;
+    }
+
+    if (!BSP_LoadTexturesGL(&bsp))
+    {
+        BSP_Free(&bsp);
+        CloseWindow();
+        return 1;
+    }
 
     Camera camera;
     InitCamera(&camera, &player, headLerp);
@@ -103,12 +118,16 @@ int main(void)
                 break;
 
             case GAME_STATE_GAME:
+                BeginMode3D(camera);
+                    BSP_Render(&bsp);
+                EndMode3D();
                 break;
             }
 
         EndDrawing();
     }
 
+    BSP_Free(&bsp);
     CloseWindow();
 
     return 0;

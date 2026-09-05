@@ -1,15 +1,12 @@
 CC = clang
 TARGET = build/javardtex
 
-LUA_CFLAGS = $(shell pkg-config --cflags lua5.4)
-LUA_LIBS   = $(shell pkg-config --libs lua5.4)
-
-CFLAGS  = -std=c99 -Werror -Iinclude -Wall -Wextra $(LUA_CFLAGS)
-CFLAGS2 = -std=c99 -Iinclude -Wall -Wextra $(LUA_CFLAGS)
+CFLAGS = -std=c99 -Werror -Iinclude -Wall -Wextra
+CFLAGS2 = -std=c99 -Iinclude -Wall -Wextra
 
 SRC = src/*.c
 
-LIB = -Llib -lraylib -lGL -lm -lpthread -ldl -lrt -lX11 $(LUA_LIBS)
+LIB = -Llib -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
 
 RAYLIB_DIR = external/raylib/src
 
