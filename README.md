@@ -5,7 +5,7 @@ pronounced javard-tech (tex derives from the greek "τέχνη" which means craf
 
 ## Linux
 ```sh
-git clone --recurse-submodules https://github.com/bacalhau-seco/javardtex.git
+git clone --recurse-submodules git@based.pt:bacalhau/javardtex.git
 cd javardtex
 make
 ```
@@ -13,11 +13,6 @@ make
 ## Contributing
 The project is mainly worked on plain git (not github) to contribute you can create a patch and email me (bacalhau@based.pt).
 Also check TODO.md where you can see the development plan
-
-### Submitting issues
-To submit an issue simply add a markdown file containing all information about it. The name of the file must be the current issue number.
-
-Follow the example of issues/0001.md.
 
 ### Patching
 
