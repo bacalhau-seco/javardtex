@@ -604,3 +604,57 @@ void BSP_Render(const BSP_Map *map)
 
     rlEnableBackfaceCulling();
 }
+
+static bool BSP_ParseVector3(const char *text, Vector3 *position)
+{
+    return sscanf(text, "%f %f %f", &position->x, &position->y, &position->z) == 3;
+}
+
+bool BSP_GetPlayerStart(const BSP_Map *map, Vector3 *position)
+{
+    const char *entity;
+    const char *end;
+
+    if (!map || !map->entities || !position)
+        return false;
+
+    entity = map->entities;
+
+    while (*entity)
+    {
+        end = strchr(entity, '}');
+
+        if (!end)
+            break;
+
+        if (strstr(entity, "\"classname\" \"player_start\"") && strstr(entity, "\"origin\"") < end)
+        {
+            const char *origin = strstr(entity, "\"origin\"");
+
+            origin = strchr(origin, '"');
+            if (!origin)
+                return false;
+
+            origin = strchr(origin + 1, '"');
+            if (!origin)
+                return false;
+
+            origin++;
+
+            origin = strchr(origin, '"');
+            if (!origin || origin >= end)
+                return false;
+
+            origin++;
+
+            if (!BSP_ParseVector3(origin, position))
+                return false;
+
+            return true;
+        }
+
+        entity = end + 1;
+    }
+
+    return false;
+}

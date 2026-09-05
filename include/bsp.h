@@ -151,5 +151,6 @@ void BSP_Render(const BSP_Map *map);
 BSP_Texture *BSP_GetTexture(BSP_Map *map, int index);
 int BSP_GetFaceVertices(const BSP_Map *map, const BSP_Face *face, BSP_Vertex *out);
 void BSP_GetTexCoord(const BSP_TexInfo *texinfo, const BSP_Vertex *vertex, float *s, float *t);
+bool BSP_GetPlayerStart(const BSP_Map *map, Vector3 *position);
 
 #endif

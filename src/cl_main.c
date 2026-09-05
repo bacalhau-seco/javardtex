@@ -33,6 +33,15 @@ int main(void)
         return 1;
     }
 
+    Vector3 spawn;
+
+    if (BSP_GetPlayerStart(&bsp, &spawn))
+    {
+        player.position.x = spawn.x;
+        player.position.y = spawn.z;
+        player.position.z = -spawn.y;
+    }
+
     Camera camera;
     InitCamera(&camera, &player, headLerp);
 
