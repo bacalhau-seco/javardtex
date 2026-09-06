@@ -1,8 +1,7 @@
 CC = clang
 TARGET = build/javardtex
 
-CFLAGS = -std=c99 -Werror -Iinclude -Wall -Wextra
-CFLAGS2 = -std=c99 -Iinclude -Wall -Wextra
+CFLAGS = -std=c99 -Werror -Iinclude -Wall -Wextra -O3
 
 SRC = src/*.c
 
@@ -24,10 +23,6 @@ all: raylib
 
 run: raylib
 	$(CC) $(CFLAGS) $(SRC) $(LIB) -o $(TARGET)
-	./$(TARGET)
-
-force: raylib
-	$(CC) $(CFLAGS2) $(SRC) $(LIB) -o $(TARGET)
 	./$(TARGET)
 
 raylib:

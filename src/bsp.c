@@ -3,10 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "rlgl.h"
 
 #define BSP_MIP_LEVELS 4
-#define BSP_MAX_TEXTURES 4096
 
 static void *BSP_ReadLumpData(FILE *file, const BSP_Lump *lump)
 {
@@ -19,6 +17,7 @@ static void *BSP_ReadLumpData(FILE *file, const BSP_Lump *lump)
         return NULL;
 
     data = malloc((size_t)lump->length);
+
     if (!data)
         return NULL;
 
@@ -49,6 +48,7 @@ static bool BSP_LoadLump(FILE *file, const BSP_Lump *lump, void **out, int *coun
         return false;
 
     *count = lump->length / (int32_t)element_size;
+
     return true;
 }
 
@@ -101,15 +101,18 @@ static bool BSP_LoadTextureData(const unsigned char *data, size_t size, BSP_Text
 {
     int32_t width;
     int32_t height;
-    int32_t offsets[4];
-    size_t mip_size;
+    int32_t offsets[BSP_MIP_LEVELS];
+    size_t mip0_size;
+    size_t mip1_size;
+    size_t mip2_size;
+    size_t mip3_size;
     size_t pixels_size;
     size_t palette_offset;
     uint16_t palette_entries;
     size_t palette_size;
     int i;
 
-    if (size < 40)
+    if (!data || !texture || size < 40)
         return false;
 
     memcpy(texture->name, data, BSP_MAX_TEXTURE_NAME);
@@ -122,29 +125,36 @@ static bool BSP_LoadTextureData(const unsigned char *data, size_t size, BSP_Text
     if (width <= 0 || height <= 0)
         return false;
 
+    if ((width & 3) != 0 || (height & 3) != 0)
+        return false;
+
     for (i = 0; i < BSP_MIP_LEVELS; i++)
     {
-        if (offsets[i] < 0 || (size_t)offsets[i] >= size)
+        if (offsets[i] < 40 || (size_t)offsets[i] >= size)
             return false;
     }
 
-    mip_size = (size_t)width * (size_t)height;
-    pixels_size = mip_size + mip_size / 4 + mip_size / 16 + mip_size / 64;
+    mip0_size = (size_t)width * (size_t)height;
+    mip1_size = ((size_t)width >> 1) * ((size_t)height >> 1);
+    mip2_size = ((size_t)width >> 2) * ((size_t)height >> 2);
+    mip3_size = ((size_t)width >> 3) * ((size_t)height >> 3);
+
+    pixels_size = mip0_size + mip1_size + mip2_size + mip3_size;
 
     if ((size_t)offsets[0] + pixels_size > size)
         return false;
 
-    palette_offset = (size_t)offsets[3] + mip_size / 64;
+    palette_offset = (size_t)offsets[3] + mip3_size;
 
     if (palette_offset + sizeof(uint16_t) > size)
         return false;
 
     memcpy(&palette_entries, data + palette_offset, sizeof(palette_entries));
 
-    if (palette_entries == 0)
+    if (palette_entries != 256)
         return false;
 
-    palette_size = (size_t)palette_entries * 3;
+    palette_size = 256 * 3;
 
     if (palette_offset + sizeof(uint16_t) + palette_size > size)
         return false;
@@ -161,10 +171,13 @@ static bool BSP_LoadTextureData(const unsigned char *data, size_t size, BSP_Text
         return false;
 
     memcpy(texture->data, data + offsets[0], pixels_size);
-    texture->data_size = pixels_size;
 
-    for (i = 0; i < BSP_MIP_LEVELS; i++)
-        texture->pixels[i] = texture->data + (offsets[i] - offsets[0]);
+    texture->data_size = (uint32_t)pixels_size;
+
+    texture->pixels[0] = texture->data;
+    texture->pixels[1] = texture->pixels[0] + mip0_size;
+    texture->pixels[2] = texture->pixels[1] + mip1_size;
+    texture->pixels[3] = texture->pixels[2] + mip2_size;
 
     texture->palette = malloc(palette_size);
 
@@ -172,6 +185,10 @@ static bool BSP_LoadTextureData(const unsigned char *data, size_t size, BSP_Text
     {
         free(texture->data);
         texture->data = NULL;
+
+        for (i = 0; i < BSP_MIP_LEVELS; i++)
+            texture->pixels[i] = NULL;
+
         return false;
     }
 
@@ -236,7 +253,13 @@ static bool BSP_LoadTextures(FILE *file, const BSP_Lump *lump, BSP_Map *map)
         if (offset < 0 || (size_t)offset >= (size_t)lump->length)
             continue;
 
-        BSP_LoadTextureData(data + offset, (size_t)lump->length - (size_t)offset, &map->textures[i]);
+        if (!BSP_LoadTextureData(
+                data + offset,
+                (size_t)lump->length - (size_t)offset,
+                &map->textures[i]))
+        {
+            memset(&map->textures[i], 0, sizeof(BSP_Texture));
+        }
     }
 
     free(data);
@@ -268,7 +291,8 @@ static bool BSP_BuildSurfaces(BSP_Map *map)
 
         surface->texinfo = &map->texinfo[face->texinfo];
 
-        if (surface->texinfo->miptex < 0 || surface->texinfo->miptex >= map->num_textures)
+        if (surface->texinfo->miptex < 0 ||
+            surface->texinfo->miptex >= map->num_textures)
             continue;
 
         surface->texture = &map->textures[surface->texinfo->miptex];
@@ -337,62 +361,6 @@ bool BSP_Load(BSP_Map *map, const char *path)
     return BSP_BuildSurfaces(map);
 }
 
-bool BSP_LoadTexturesGL(BSP_Map *map)
-{
-    int i;
-
-    if (!map)
-        return false;
-
-    for (i = 0; i < map->num_textures; i++)
-    {
-        BSP_Texture *texture = &map->textures[i];
-        Color *pixels;
-        Image image;
-        size_t pixel_count;
-        size_t j;
-
-        if (!texture->data || !texture->palette)
-            continue;
-
-        pixel_count = (size_t)texture->width * (size_t)texture->height;
-
-        pixels = malloc(pixel_count * sizeof(Color));
-
-        if (!pixels)
-            return false;
-
-        for (j = 0; j < pixel_count; j++)
-        {
-            uint8_t index = texture->pixels[0][j];
-
-            pixels[j].r = texture->palette[index * 3 + 0];
-            pixels[j].g = texture->palette[index * 3 + 1];
-            pixels[j].b = texture->palette[index * 3 + 2];
-            pixels[j].a = 255;
-
-            if (texture->name[0] == '{' && index == 255)
-                pixels[j].a = 0;
-        }
-
-        image.data = pixels;
-        image.width = (int)texture->width;
-        image.height = (int)texture->height;
-        image.mipmaps = 1;
-        image.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
-
-        texture->texture = LoadTextureFromImage(image);
-        texture->loaded = IsTextureValid(texture->texture);
-
-        UnloadImage(image);
-
-        if (texture->loaded)
-            SetTextureFilter(texture->texture, TEXTURE_FILTER_POINT);
-    }
-
-    return true;
-}
-
 void BSP_Free(BSP_Map *map)
 {
     int i;
@@ -404,9 +372,6 @@ void BSP_Free(BSP_Map *map)
     {
         for (i = 0; i < map->num_textures; i++)
         {
-            if (map->textures[i].loaded)
-                UnloadTexture(map->textures[i].texture);
-
             free(map->textures[i].data);
             free(map->textures[i].palette);
         }
@@ -452,7 +417,8 @@ int BSP_GetFaceVertices(const BSP_Map *map, const BSP_Face *face, BSP_Vertex *ou
         int edge_index;
         uint16_t vertex_index;
 
-        if (face->firstedge + i >= map->num_surfedges)
+        if (face->firstedge + i < 0 ||
+            face->firstedge + i >= map->num_surfedges)
             return 0;
 
         surfedge_index = map->surfedges[face->firstedge + i];
@@ -487,135 +453,29 @@ int BSP_GetFaceVertices(const BSP_Map *map, const BSP_Face *face, BSP_Vertex *ou
 
 void BSP_GetTexCoord(const BSP_TexInfo *texinfo, const BSP_Vertex *vertex, float *s, float *t)
 {
-    *s = vertex->x * texinfo->vecs[0][0] + vertex->y * texinfo->vecs[0][1] + vertex->z * texinfo->vecs[0][2] + texinfo->vecs[0][3];
-    *t = vertex->x * texinfo->vecs[1][0] + vertex->y * texinfo->vecs[1][1] + vertex->z * texinfo->vecs[1][2] + texinfo->vecs[1][3];
+    *s = vertex->x * texinfo->vecs[0][0] +
+         vertex->y * texinfo->vecs[0][1] +
+         vertex->z * texinfo->vecs[0][2] +
+         texinfo->vecs[0][3];
+
+    *t = vertex->x * texinfo->vecs[1][0] +
+         vertex->y * texinfo->vecs[1][1] +
+         vertex->z * texinfo->vecs[1][2] +
+         texinfo->vecs[1][3];
 }
 
-static void BSP_VertexRaylib(const BSP_Vertex *in, float *x, float *y, float *z)
+static bool BSP_ParseVector3(const char *text, float *x, float *y, float *z)
 {
-    *x = in->x;
-    *y = in->z;
-    *z = -in->y;
-}
-static void BSP_RenderFace(const BSP_Map *map, const BSP_Surface *surface)
-{
-    BSP_Vertex *vertices;
-    int count;
-    int i;
-
-    if (surface->face.numedges < 3)
-        return;
-
-    vertices = malloc((size_t)surface->face.numedges * sizeof(BSP_Vertex));
-
-    if (!vertices)
-        return;
-
-    count = BSP_GetFaceVertices(map, &surface->face, vertices);
-
-    if (count < 3)
-    {
-        free(vertices);
-        return;
-    }
-
-    if (surface->texture && surface->texture->loaded && surface->texinfo)
-        rlSetTexture(surface->texture->texture.id);
-    else
-        rlSetTexture(0);
-
-    rlBegin(RL_TRIANGLES);
-
-    for (i = 1; i < count - 1; i++)
-    {
-        BSP_Vertex *v0 = &vertices[0];
-        BSP_Vertex *v1 = &vertices[i];
-        BSP_Vertex *v2 = &vertices[i + 1];
-
-        float x0, y0, z0;
-        float x1, y1, z1;
-        float x2, y2, z2;
-
-        float s0 = 0.0f;
-        float t0 = 0.0f;
-        float s1 = 0.0f;
-        float t1 = 0.0f;
-        float s2 = 0.0f;
-        float t2 = 0.0f;
-
-        BSP_VertexRaylib(v0, &x0, &y0, &z0);
-        BSP_VertexRaylib(v1, &x1, &y1, &z1);
-        BSP_VertexRaylib(v2, &x2, &y2, &z2);
-
-        if (surface->texinfo && surface->texture && surface->texture->loaded)
-        {
-            BSP_GetTexCoord(surface->texinfo, v0, &s0, &t0);
-            BSP_GetTexCoord(surface->texinfo, v1, &s1, &t1);
-            BSP_GetTexCoord(surface->texinfo, v2, &s2, &t2);
-
-            s0 /= surface->texture->width;
-            t0 = -t0 / surface->texture->height;
-
-            s1 /= surface->texture->width;
-            t1 = -t1 / surface->texture->height;
-
-            s2 /= surface->texture->width;
-            t2 = -t2 / surface->texture->height;
-        }
-
-        rlColor4ub(255, 255, 255, 255);
-
-        rlTexCoord2f(s0, t0);
-        rlVertex3f(x0, y0, z0);
-
-        rlTexCoord2f(s1, t1);
-        rlVertex3f(x1, y1, z1);
-
-        rlTexCoord2f(s2, t2);
-        rlVertex3f(x2, y2, z2);
-
-        rlTexCoord2f(s0, t0);
-        rlVertex3f(x0, y0, z0);
-
-        rlTexCoord2f(s2, t2);
-        rlVertex3f(x2, y2, z2);
-
-        rlTexCoord2f(s1, t1);
-        rlVertex3f(x1, y1, z1);
-    }
-
-    rlEnd();
-    rlSetTexture(0);
-
-    free(vertices);
+    return sscanf(text, "%f %f %f", x, y, z) == 3;
 }
 
-void BSP_Render(const BSP_Map *map)
-{
-    int i;
-
-    if (!map || !map->surfaces)
-        return;
-
-    rlDisableBackfaceCulling();
-
-    for (i = 0; i < map->num_faces; i++)
-        BSP_RenderFace(map, &map->surfaces[i]);
-
-    rlEnableBackfaceCulling();
-}
-
-static bool BSP_ParseVector3(const char *text, Vector3 *position)
-{
-    return sscanf(text, "%f %f %f", &position->x, &position->y, &position->z) == 3;
-}
-
-bool BSP_GetPlayerStart(const BSP_Map *map, Vector3 *position)
+bool BSP_GetPlayerStart(const BSP_Map *map, float *x, float *y, float *z)
 {
     const char *entity;
     const char *end;
+    const char *origin;
 
-    if (!map || !map->entities || !position)
+    if (!map || !map->entities || !x || !y || !z)
         return false;
 
     entity = map->entities;
@@ -627,30 +487,31 @@ bool BSP_GetPlayerStart(const BSP_Map *map, Vector3 *position)
         if (!end)
             break;
 
-        if (strstr(entity, "\"classname\" \"player_start\"") && strstr(entity, "\"origin\"") < end)
+        if (strstr(entity, "\"classname\" \"player_start\"") &&
+            strstr(entity, "\"origin\"") < end)
         {
-            const char *origin = strstr(entity, "\"origin\"");
+            origin = strstr(entity, "\"origin\"");
 
             origin = strchr(origin, '"');
+
             if (!origin)
                 return false;
 
             origin = strchr(origin + 1, '"');
+
             if (!origin)
                 return false;
 
             origin++;
 
             origin = strchr(origin, '"');
+
             if (!origin || origin >= end)
                 return false;
 
             origin++;
 
-            if (!BSP_ParseVector3(origin, position))
-                return false;
-
-            return true;
+            return BSP_ParseVector3(origin, x, y, z);
         }
 
         entity = end + 1;

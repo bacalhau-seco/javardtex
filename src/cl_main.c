@@ -1,9 +1,11 @@
 #include "../include/defs.h"
 #include "../include/title.h"
 #include "../include/bsp.h"
+#include "../include/render.h"
 
 static Body player = { 0 };
 static BSP_Map bsp = { 0 };
+static BSP_Renderer bspRenderer = { 0 };
 static Vector2 lookRotation = { 0 };
 static float headLerp;
 GameState gameState = GAME_STATE_TITLE;
@@ -26,7 +28,7 @@ int main(void)
         return 1;
     }
 
-    if (!BSP_LoadTexturesGL(&bsp))
+    if (!BSP_RendererInit(&bspRenderer, &bsp))
     {
         BSP_Free(&bsp);
         CloseWindow();
@@ -35,7 +37,7 @@ int main(void)
 
     Vector3 spawn;
 
-    if (BSP_GetPlayerStart(&bsp, &spawn))
+    if (BSP_GetPlayerStart(&bsp, &spawn.x, &spawn.y, &spawn.z))
     {
         player.position.x = spawn.x;
         player.position.y = spawn.z;
@@ -128,7 +130,7 @@ int main(void)
 
             case GAME_STATE_GAME:
                 BeginMode3D(camera);
-                    BSP_Render(&bsp);
+                    BSP_Render(&bsp, &bspRenderer);
                 EndMode3D();
                 break;
             }
@@ -136,7 +138,9 @@ int main(void)
         EndDrawing();
     }
 
+    BSP_RendererShutdown(&bspRenderer);
     BSP_Free(&bsp);
+
     CloseWindow();
 
     return 0;

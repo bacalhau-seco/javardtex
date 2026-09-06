@@ -4,11 +4,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "raylib.h"
-
 #define BSP_VERSION 30
 #define BSP_LUMP_COUNT 15
 #define BSP_MAX_TEXTURE_NAME 16
+#define BSP_MAX_TEXTURES 4096
 
 #define BSP_LUMP_ENTITIES      0
 #define BSP_LUMP_PLANES        1
@@ -24,7 +23,7 @@
 #define BSP_LUMP_MARKSURFACES 11
 #define BSP_LUMP_EDGES         12
 #define BSP_LUMP_SURFEDGES     13
-#define BSP_LUMP_MODELS       14
+#define BSP_LUMP_MODELS        14
 
 typedef struct {
     int32_t offset;
@@ -94,15 +93,17 @@ typedef struct {
 
 typedef struct {
     char name[BSP_MAX_TEXTURE_NAME];
+
     uint32_t width;
     uint32_t height;
+
     uint32_t offsets[4];
+
     uint8_t *pixels[4];
     uint8_t *palette;
+
     uint8_t *data;
     uint32_t data_size;
-    Texture2D texture;
-    bool loaded;
 } BSP_Texture;
 
 typedef struct {
@@ -113,44 +114,61 @@ typedef struct {
 
 typedef struct {
     int version;
+
     char *entities;
     int entities_size;
+
     BSP_Plane *planes;
     int num_planes;
+
     BSP_Vertex *vertices;
     int num_vertices;
+
     BSP_Node *nodes;
     int num_nodes;
+
     BSP_TexInfo *texinfo;
     int num_texinfo;
+
     BSP_Face *faces;
     int num_faces;
+
     BSP_ClipNode *clipnodes;
     int num_clipnodes;
+
     BSP_Leaf *leaves;
     int num_leaves;
+
     uint16_t *marksurfaces;
     int num_marksurfaces;
+
     BSP_Edge *edges;
     int num_edges;
+
     int32_t *surfedges;
     int num_surfedges;
+
     uint8_t *visibility;
     int visibility_size;
+
     uint8_t *lighting;
     int lighting_size;
+
     BSP_Surface *surfaces;
+
     BSP_Texture *textures;
     int num_textures;
 } BSP_Map;
 
 bool BSP_Load(BSP_Map *map, const char *path);
 void BSP_Free(BSP_Map *map);
-bool BSP_LoadTexturesGL(BSP_Map *map);
-void BSP_Render(const BSP_Map *map);
+
 BSP_Texture *BSP_GetTexture(BSP_Map *map, int index);
+
 int BSP_GetFaceVertices(const BSP_Map *map, const BSP_Face *face, BSP_Vertex *out);
+
 void BSP_GetTexCoord(const BSP_TexInfo *texinfo, const BSP_Vertex *vertex, float *s, float *t);
-bool BSP_GetPlayerStart(const BSP_Map *map, Vector3 *position);
+
+bool BSP_GetPlayerStart(const BSP_Map *map, float *x, float *y, float *z);
 
 #endif
