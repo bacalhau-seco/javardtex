@@ -22,7 +22,7 @@ int main(void)
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(screenWidth, screenHeight, "javardtex");
 
-    if (!BSP_Load(&bsp, "maps/test.bsp"))
+    if (!BSP_Load(&bsp, "game/maps/test.bsp"))
     {
         CloseWindow();
         return 1;

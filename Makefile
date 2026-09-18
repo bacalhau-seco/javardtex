@@ -19,6 +19,7 @@ HEADERS = \
 .PHONY: all run clean force raylib
 
 all: raylib
+	cp -r game/ build/
 	$(CC) $(CFLAGS) $(SRC) $(LIB) -o $(TARGET)
 
 run: raylib

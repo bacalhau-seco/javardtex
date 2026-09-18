@@ -1,7 +1,7 @@
 #ifndef GAME_H
 #define GAME_H
 
-#define GAMENAME "JavardTex Demo"
+#define GAMENAME "fodasse"
 #define VERSION "0.0.0"
 #define AUTHOR "bacalhau"
 
