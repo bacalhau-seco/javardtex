@@ -1,4 +1,4 @@
-CC = clang
+CC = cc
 TARGET = build/javardtex
 
 CFLAGS = -std=c99 -Werror -Iinclude -Wall -Wextra -O3
