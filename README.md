@@ -24,5 +24,5 @@ If the patch you are sending is for a documented issue:
 State the issue number and also edit the issue file adding a "(fixed by)" followed by your name (or alias) and date of submission right next to the title.
 
 ### Use of AI
-Do NOT submit code you didn't write!
+Just don't submit massive walls of unreadable code.
 
