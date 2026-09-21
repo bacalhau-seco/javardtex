@@ -1,6 +1,6 @@
 #pragma once
 
-#import "raylib.h"
+#include "raylib.h"
 
 
 // Body structure
