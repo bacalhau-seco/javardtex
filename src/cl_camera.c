@@ -19,9 +19,7 @@ void Camera_Update(Camera *camera,
 
     Vector3 right = Vector3Normalize(Vector3CrossProduct(yaw, up));
 
-    float pitch = Clamp(-lookRotation.y,
-                        -PI/2 + 0.0001f,
-                         PI/2 - 0.0001f);
+    float pitch = -lookRotation.y;
 
     Vector3 dir = Vector3RotateByAxisAngle(yaw, right, pitch);
 

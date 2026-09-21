@@ -2,6 +2,7 @@
 #include "../include/title.h"
 #include "../include/bsp.h"
 #include "../include/render.h"
+#include <stdio.h>
 
 static Body player = { 0 };
 static BSP_Map bsp = { 0 };
@@ -84,6 +85,9 @@ int main(void)
         case GAME_STATE_GAME:
             lookRotation.x -= in.mouse.x * Cvar_Get("cl_mouseh")->value;
             lookRotation.y += in.mouse.y * Cvar_Get("cl_mousev")->value;
+            lookRotation.y = Clamp(lookRotation.y, -PI/2+0.001f, PI/2-0.001f);
+            
+            printf("%.2f\n", lookRotation.y);
 
             UpdatePlayer(
                 &player,
