@@ -2,6 +2,7 @@
 #include "../include/title.h"
 #include "../include/bsp.h"
 #include "../include/render.h"
+#include "../include/collision.h"
 
 static Body player = { 0 };
 static BSP_Map bsp = { 0 };
@@ -37,12 +38,8 @@ int main(void)
 
     Vector3 spawn;
 
-    if (BSP_GetPlayerStart(&bsp, &spawn.x, &spawn.y, &spawn.z))
-    {
-        player.position.x = spawn.x;
-        player.position.y = spawn.z;
-        player.position.z = -spawn.y;
-    }
+    if (Collision_GetSpawn(&bsp, &spawn))
+        player.position = spawn;
 
     Camera camera;
     InitCamera(&camera, &player, headLerp);
@@ -87,6 +84,7 @@ int main(void)
             lookRotation.y = Clamp(lookRotation.y, -PI/2+0.001f, PI/2-0.001f);
 
             UpdatePlayer(
+                &bsp,
                 &player,
                 lookRotation.x,
                 in.side,
@@ -131,7 +129,7 @@ int main(void)
 
             case GAME_STATE_GAME:
                 BeginMode3D(camera);
-                    BSP_Render(&bsp, &bspRenderer);
+                    BSP_Render(&bspRenderer);
                 EndMode3D();
                 break;
             }

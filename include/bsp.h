@@ -1,13 +1,16 @@
 #ifndef BSP_H
 #define BSP_H
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #define BSP_VERSION 30
 #define BSP_LUMP_COUNT 15
-#define BSP_MAX_TEXTURE_NAME 16
 #define BSP_MAX_TEXTURES 4096
+#define BSP_TEXTURE_NAME_SIZE 16
+#define BSP_CONTENTS_EMPTY -1
+#define BSP_CONTENTS_SOLID -2
+#define BSP_HULL_PLAYER 1
 
 #define BSP_LUMP_ENTITIES      0
 #define BSP_LUMP_PLANES        1
@@ -21,19 +24,14 @@
 #define BSP_LUMP_CLIPNODES     9
 #define BSP_LUMP_LEAVES       10
 #define BSP_LUMP_MARKSURFACES 11
-#define BSP_LUMP_EDGES         12
-#define BSP_LUMP_SURFEDGES     13
-#define BSP_LUMP_MODELS        14
+#define BSP_LUMP_EDGES        12
+#define BSP_LUMP_SURFEDGES    13
+#define BSP_LUMP_MODELS       14
 
 typedef struct {
     int32_t offset;
     int32_t length;
 } BSP_Lump;
-
-typedef struct {
-    int32_t version;
-    BSP_Lump lumps[BSP_LUMP_COUNT];
-} BSP_Header;
 
 typedef struct {
     float normal[3];
@@ -77,6 +75,11 @@ typedef struct {
 } BSP_Face;
 
 typedef struct {
+    int32_t planenum;
+    int16_t children[2];
+} BSP_ClipNode;
+
+typedef struct {
     int32_t contents;
     int32_t visofs;
     int16_t mins[3];
@@ -87,33 +90,25 @@ typedef struct {
 } BSP_Leaf;
 
 typedef struct {
-    int32_t planenum;
-    int16_t children[2];
-} BSP_ClipNode;
+    float mins[3];
+    float maxs[3];
+    float origin[3];
+    int32_t headnode[4];
+    int32_t visleafs;
+    int32_t firstface;
+    int32_t numfaces;
+} BSP_Model;
 
 typedef struct {
-    char name[BSP_MAX_TEXTURE_NAME];
-
+    char name[BSP_TEXTURE_NAME_SIZE];
     uint32_t width;
     uint32_t height;
-
-    uint32_t offsets[4];
-
-    uint8_t *pixels[4];
-    uint8_t *palette;
-
-    uint8_t *data;
-    uint32_t data_size;
+    uint8_t *pixels;
+    uint8_t palette[256][3];
 } BSP_Texture;
 
 typedef struct {
-    BSP_Face face;
-    BSP_TexInfo *texinfo;
-    BSP_Texture *texture;
-} BSP_Surface;
-
-typedef struct {
-    int version;
+    int32_t version;
 
     char *entities;
     int entities_size;
@@ -124,14 +119,20 @@ typedef struct {
     BSP_Vertex *vertices;
     int num_vertices;
 
-    BSP_Node *nodes;
-    int num_nodes;
+    BSP_Edge *edges;
+    int num_edges;
+
+    int32_t *surfedges;
+    int num_surfedges;
 
     BSP_TexInfo *texinfo;
     int num_texinfo;
 
     BSP_Face *faces;
     int num_faces;
+
+    BSP_Node *nodes;
+    int num_nodes;
 
     BSP_ClipNode *clipnodes;
     int num_clipnodes;
@@ -142,19 +143,8 @@ typedef struct {
     uint16_t *marksurfaces;
     int num_marksurfaces;
 
-    BSP_Edge *edges;
-    int num_edges;
-
-    int32_t *surfedges;
-    int num_surfedges;
-
-    uint8_t *visibility;
-    int visibility_size;
-
-    uint8_t *lighting;
-    int lighting_size;
-
-    BSP_Surface *surfaces;
+    BSP_Model *models;
+    int num_models;
 
     BSP_Texture *textures;
     int num_textures;

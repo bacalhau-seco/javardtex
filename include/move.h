@@ -1,9 +1,10 @@
 #pragma once
 
+#include <stdbool.h>
+
 #include "raylib.h"
+#include "bsp.h"
 
-
-// Body structure
 typedef struct {
     Vector3 position;
     Vector3 velocity;
@@ -11,4 +12,4 @@ typedef struct {
     bool isGrounded;
 } Body;
 
-void UpdatePlayer(Body *body, float rot, char side, char forward, bool jumpPressed, bool crouchHold, float delta);
+void UpdatePlayer(const BSP_Map *map, Body *body, float rot, char side, char forward, bool jumpPressed, bool crouchHold, float delta);

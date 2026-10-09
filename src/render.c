@@ -1,245 +1,218 @@
-// redo later
 #include "../include/render.h"
 
 #include <stdlib.h>
 #include <string.h>
-#include <stdint.h>
 
 #include <raylib.h>
 #include <rlgl.h>
 
-static void BSP_RendererVertex(const BSP_Vertex *vertex, float s, float t)
+static bool IsHiddenTexture(const char *name)
 {
-    rlTexCoord2f(s, t);
-    rlColor4ub(255, 255, 255, 255);
-    rlVertex3f(vertex->x, vertex->z, -vertex->y);
+    return strncmp(name, "sky", 3) == 0
+        || strncmp(name, "clip", 4) == 0
+        || strncmp(name, "trigger", 7) == 0
+        || strncmp(name, "aaatrigger", 10) == 0
+        || strcmp(name, "null") == 0
+        || strcmp(name, "hint") == 0
+        || strcmp(name, "skip") == 0
+        || strcmp(name, "origin") == 0;
 }
 
-static void BSP_RenderTriangle(const BSP_Surface *surface, const BSP_Vertex *v0, const BSP_Vertex *v1, const BSP_Vertex *v2)
+static uint32_t CreateTexture(const BSP_Texture *texture)
 {
-    float s0;
-    float t0;
-    float s1;
-    float t1;
-    float s2;
-    float t2;
+    size_t count = (size_t)texture->width * (size_t)texture->height;
+    bool masked = texture->name[0] == '{';
+    Image image;
+    Texture2D gpu;
+    Color *pixels;
+    size_t i;
 
-    BSP_GetTexCoord(surface->texinfo, v0, &s0, &t0);
-    BSP_GetTexCoord(surface->texinfo, v1, &s1, &t1);
-    BSP_GetTexCoord(surface->texinfo, v2, &s2, &t2);
+    image = GenImageColor((int)texture->width, (int)texture->height, BLANK);
 
-    s0 /= (float)surface->texture->width;
-    t0 /= (float)surface->texture->height;
+    if (!image.data)
+        return 0;
 
-    s1 /= (float)surface->texture->width;
-    t1 /= (float)surface->texture->height;
+    pixels = image.data;
 
-    s2 /= (float)surface->texture->width;
-    t2 /= (float)surface->texture->height;
+    for (i = 0; i < count; i++)
+    {
+        uint8_t index = texture->pixels[i];
 
-    BSP_RendererVertex(v0, s0, -t0);
-    BSP_RendererVertex(v1, s1, -t1);
-    BSP_RendererVertex(v2, s2, -t2);
+        pixels[i].r = texture->palette[index][0];
+        pixels[i].g = texture->palette[index][1];
+        pixels[i].b = texture->palette[index][2];
+        pixels[i].a = (masked && index == 255) ? 0 : 255;
+    }
+
+    gpu = LoadTextureFromImage(image);
+    UnloadImage(image);
+
+    if (gpu.id == 0)
+        return 0;
+
+    SetTextureFilter(gpu, TEXTURE_FILTER_POINT);
+
+    return gpu.id;
 }
 
-static void BSP_RenderFace(const BSP_Map *map, const BSP_Renderer *renderer, const BSP_Surface *surface)
+static void AppendVertex(BSP_Batch *batch, const BSP_TexInfo *texinfo, const BSP_Texture *texture, const BSP_Vertex *vertex)
 {
+    BSP_RenderVertex *out;
+    float s;
+    float t;
+
+    if (batch->count == batch->capacity)
+    {
+        int capacity = batch->capacity == 0 ? 256 : batch->capacity * 2;
+        BSP_RenderVertex *grown = realloc(batch->vertices, sizeof(BSP_RenderVertex) * (size_t)capacity);
+
+        if (!grown)
+            return;
+
+        batch->vertices = grown;
+        batch->capacity = capacity;
+    }
+
+    BSP_GetTexCoord(texinfo, vertex, &s, &t);
+
+    out = &batch->vertices[batch->count++];
+    out->x = vertex->x;
+    out->y = vertex->z;
+    out->z = -vertex->y;
+    out->s = s / (float)texture->width;
+    out->t = -t / (float)texture->height;
+}
+
+static void AddFace(BSP_Renderer *renderer, const BSP_Map *map, const BSP_Face *face)
+{
+    const BSP_TexInfo *texinfo;
+    const BSP_Texture *texture;
+    BSP_Batch *batch;
     BSP_Vertex *vertices;
-    int num_vertices;
-    int texture_index;
-    uint32_t texture;
+    int count;
+    int i;
 
-    if (!surface->texinfo || !surface->texture)
+    if (face->texinfo >= map->num_texinfo)
         return;
 
-    if (surface->texture->width == 0 ||
-        surface->texture->height == 0)
+    texinfo = &map->texinfo[face->texinfo];
+
+    if (texinfo->miptex < 0 || texinfo->miptex >= map->num_textures)
         return;
 
-    if (!surface->texture->pixels[0] ||
-        !surface->texture->palette)
+    batch = &renderer->batches[texinfo->miptex];
+    texture = &map->textures[texinfo->miptex];
+
+    if (batch->texture_id == 0 || face->numedges < 3)
         return;
 
-    texture_index = surface->texinfo->miptex;
-
-    if (texture_index < 0 ||
-        texture_index >= renderer->num_textures)
-        return;
-
-    texture = renderer->textures[texture_index];
-
-    if (!texture)
-        return;
-
-    if (surface->face.numedges < 3)
-        return;
-
-    vertices = malloc(sizeof(BSP_Vertex) * (size_t)surface->face.numedges);
+    vertices = malloc(sizeof(BSP_Vertex) * face->numedges);
 
     if (!vertices)
         return;
 
-    num_vertices = BSP_GetFaceVertices(map, &surface->face, vertices);
+    count = BSP_GetFaceVertices(map, face, vertices);
 
-    if (num_vertices < 3)
+    for (i = 1; i + 1 < count; i++)
     {
-        free(vertices);
-        return;
+        AppendVertex(batch, texinfo, texture, &vertices[0]);
+        AppendVertex(batch, texinfo, texture, &vertices[i]);
+        AppendVertex(batch, texinfo, texture, &vertices[i + 1]);
+
+        AppendVertex(batch, texinfo, texture, &vertices[i + 1]);
+        AppendVertex(batch, texinfo, texture, &vertices[i]);
+        AppendVertex(batch, texinfo, texture, &vertices[0]);
     }
-
-    rlSetTexture(texture);
-
-    rlBegin(RL_TRIANGLES);
-
-    for (int i = 1; i < num_vertices - 1; i++)
-    {
-        BSP_RenderTriangle(
-            surface,
-            &vertices[0],
-            &vertices[i],
-            &vertices[i + 1]
-        );
-
-        BSP_RenderTriangle(
-            surface,
-            &vertices[i + 1],
-            &vertices[i],
-            &vertices[0]
-        );
-    }
-
-    rlEnd();
-
-    rlSetTexture(0);
 
     free(vertices);
 }
 
 bool BSP_RendererInit(BSP_Renderer *renderer, const BSP_Map *map)
 {
+    int i;
+
     if (!renderer || !map)
         return false;
 
     memset(renderer, 0, sizeof(*renderer));
 
-    if (map->num_textures <= 0)
+    if (map->num_textures == 0)
         return true;
 
-    renderer->textures = calloc(
-        (size_t)map->num_textures,
-        sizeof(uint32_t)
-    );
+    renderer->batches = calloc((size_t)map->num_textures, sizeof(BSP_Batch));
 
-    if (!renderer->textures)
+    if (!renderer->batches)
         return false;
 
-    renderer->num_textures = map->num_textures;
+    renderer->num_batches = map->num_textures;
 
-    for (int i = 0; i < map->num_textures; i++)
+    for (i = 0; i < map->num_textures; i++)
     {
         const BSP_Texture *texture = &map->textures[i];
-        size_t pixel_count;
-        Color *pixels;
-        Image image;
-        Texture2D gpu_texture;
 
-        if (!texture->pixels[0] ||
-            !texture->palette ||
-            texture->width == 0 ||
-            texture->height == 0)
+        if (!texture->pixels || IsHiddenTexture(texture->name))
             continue;
 
-        pixel_count =
-            (size_t)texture->width *
-            (size_t)texture->height;
-
-        pixels = malloc(sizeof(Color) * pixel_count);
-
-        if (!pixels)
-            continue;
-
-        for (size_t p = 0; p < pixel_count; p++)
-        {
-            uint8_t index = texture->pixels[0][p];
-
-            pixels[p].r = texture->palette[index * 3 + 0];
-            pixels[p].g = texture->palette[index * 3 + 1];
-            pixels[p].b = texture->palette[index * 3 + 2];
-            pixels[p].a = 255;
-
-            if (index == 255 && texture->name[0] == '{')
-                pixels[p].a = 0;
-        }
-
-        image = GenImageColor(
-            (int)texture->width,
-            (int)texture->height,
-            BLANK
-        );
-
-        if (!image.data)
-        {
-            free(pixels);
-            continue;
-        }
-
-        memcpy(
-            image.data,
-            pixels,
-            pixel_count * sizeof(Color)
-        );
-
-        gpu_texture = LoadTextureFromImage(image);
-
-        UnloadImage(image);
-        free(pixels);
-
-        if (gpu_texture.id == 0)
-            continue;
-
-        renderer->textures[i] = gpu_texture.id;
-
-        SetTextureFilter(
-            gpu_texture,
-            TEXTURE_FILTER_POINT
-        );
+        renderer->batches[i].texture_id = CreateTexture(texture);
     }
+
+    for (i = 0; i < map->num_faces; i++)
+        AddFace(renderer, map, &map->faces[i]);
 
     return true;
 }
 
 void BSP_RendererShutdown(BSP_Renderer *renderer)
 {
+    int i;
+
     if (!renderer)
         return;
 
-    if (renderer->textures)
+    for (i = 0; i < renderer->num_batches; i++)
     {
-        for (int i = 0; i < renderer->num_textures; i++)
-        {
-            if (renderer->textures[i])
-                rlUnloadTexture(renderer->textures[i]);
-        }
+        if (renderer->batches[i].texture_id)
+            rlUnloadTexture(renderer->batches[i].texture_id);
 
-        free(renderer->textures);
+        free(renderer->batches[i].vertices);
     }
 
+    free(renderer->batches);
     memset(renderer, 0, sizeof(*renderer));
 }
 
-void BSP_Render(const BSP_Map *map, const BSP_Renderer *renderer)
+void BSP_Render(const BSP_Renderer *renderer)
 {
-    if (!map || !renderer || !map->surfaces)
+    int i;
+    int v;
+
+    if (!renderer)
         return;
 
     rlDisableBackfaceCulling();
 
-    for (int i = 0; i < map->num_faces; i++)
-        BSP_RenderFace(
-            map,
-            renderer,
-            &map->surfaces[i]
-        );
+    for (i = 0; i < renderer->num_batches; i++)
+    {
+        const BSP_Batch *batch = &renderer->batches[i];
 
+        if (batch->count == 0)
+            continue;
+
+        rlSetTexture(batch->texture_id);
+        rlBegin(RL_TRIANGLES);
+
+        for (v = 0; v < batch->count; v++)
+        {
+            const BSP_RenderVertex *vertex = &batch->vertices[v];
+
+            rlTexCoord2f(vertex->s, vertex->t);
+            rlColor4ub(255, 255, 255, 255);
+            rlVertex3f(vertex->x, vertex->y, vertex->z);
+        }
+
+        rlEnd();
+    }
+
+    rlSetTexture(0);
     rlEnableBackfaceCulling();
 }
