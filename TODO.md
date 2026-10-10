@@ -62,7 +62,7 @@ Game assets are stored in `game/`.
 * [x] BSP30 parser
 * [x] WAD3 loader
 * [x] BSP rendering
-* [ ] BSP collision
+* [x] BSP collision
 
 ### October 2026
 
