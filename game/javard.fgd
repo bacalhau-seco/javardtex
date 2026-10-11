@@ -1,0 +1,17 @@
+@PointClass size(-16 -16 -36, 16 16 36) color(0 255 0) = info_player_start : "Player start"
+[
+    angle(integer) : "Yaw" : 0
+]
+
+@PointClass size(-8 -8 -8, 8 8 8) color(255 255 0) = light : "Light"
+[
+    _light(string) : "Color and brightness (R G B intensity)" : "255 255 255 200"
+    style(integer) : "Animation style" : 0
+    _fade(string) : "Distance fade" : "1.0"
+    _falloff(choices) : "Falloff" : 0 =
+    [
+        0 : "Inverse distance"
+        1 : "Inverse distance squared"
+        2 : "Linear"
+    ]
+]
