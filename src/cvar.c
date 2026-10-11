@@ -77,9 +77,9 @@ void Cvar_Init(void)
     Cvar_Register("sv_jumpforce", 270.0f);
     Cvar_Register("sv_friction", 4.0f);
     Cvar_Register("sv_stopspeed", 100.0f);
-    Cvar_Register("sv_standheight", 56.0f);
-    Cvar_Register("sv_bottomheight", 32.0f);
-    Cvar_Register("sv_crouchheight", 32.0f);
+    Cvar_Register("sv_bottomheight", 36.0f);
+    Cvar_Register("sv_standheight", 28.0f);
+    Cvar_Register("sv_crouchheight", 18.0f);
     Cvar_Register("sv_accel", 5.0f);
     Cvar_Register("sv_airaccel", 10.0f);
     Cvar_Register("sv_jumppenalty", 0.0f);

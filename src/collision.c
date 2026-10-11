@@ -1,6 +1,6 @@
 #include "../include/collision.h"
 
-#define PLAYER_FEET_TO_ORIGIN 24.0f
+#define PLAYER_FEET_TO_ORIGIN 36.0f
 
 static Vector3 WorldToQuake(Vector3 w)
 {

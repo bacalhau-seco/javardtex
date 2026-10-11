@@ -364,7 +364,7 @@ bool BSP_GetPlayerStart(const BSP_Map *map, float *x, float *y, float *z)
                 !ReadQuoted(&cursor, value, sizeof(value)))
                 break;
 
-            if (strcmp(key, "classname") == 0 && strcmp(value, "player_start") == 0)
+            if (strcmp(key, "classname") == 0 && strcmp(value, "info_player_start") == 0)
                 is_start = true;
 
             if (strcmp(key, "origin") == 0 && sscanf(value, "%f %f %f", &ox, &oy, &oz) == 3)
