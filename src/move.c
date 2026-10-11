@@ -6,6 +6,7 @@
 #define MOVE_STEP 1.0f
 #define GROUND_CHECK 2.0f
 #define AIR_WISH_SPEED_CAP 30.0f
+#define STEP_HEIGHT 16.0f
 
 static float *Component(Vector3 *v, int axis)
 {
@@ -46,6 +47,32 @@ static bool MoveAxis(const BSP_Map *map, Body *body, int axis, float distance)
 
         body->position = next;
     }
+
+    return true;
+}
+
+static bool MoveHorizontal(const BSP_Map *map, Body *body, int axis, float distance)
+{
+    Vector3 start = body->position;
+    Vector3 blocked;
+
+    if (MoveAxis(map, body, axis, distance))
+        return true;
+
+    blocked = body->position;
+
+    if (!body->isGrounded)
+        return false;
+
+    body->position = start;
+
+    if (!MoveAxis(map, body, 1, STEP_HEIGHT) || !MoveAxis(map, body, axis, distance))
+    {
+        body->position = blocked;
+        return false;
+    }
+
+    MoveAxis(map, body, 1, -STEP_HEIGHT);
 
     return true;
 }
@@ -152,10 +179,10 @@ void UpdatePlayer(const BSP_Map *map, Body *body, float rot, char side, char for
         Accelerate(body, body->dir, airSpeed, Cvar_Get("sv_airaccel")->value * Cvar_Get("sv_maxspeed")->value * delta);
     }
 
-    if (!MoveAxis(map, body, 0, body->velocity.x * delta))
+    if (!MoveHorizontal(map, body, 0, body->velocity.x * delta))
         body->velocity.x = 0.0f;
 
-    if (!MoveAxis(map, body, 2, body->velocity.z * delta))
+    if (!MoveHorizontal(map, body, 2, body->velocity.z * delta))
         body->velocity.z = 0.0f;
 
     if (!MoveAxis(map, body, 1, body->velocity.y * delta))
