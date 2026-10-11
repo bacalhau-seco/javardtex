@@ -308,31 +308,66 @@ void BSP_GetTexCoord(const BSP_TexInfo *texinfo, const BSP_Vertex *vertex, float
         + texinfo->vecs[1][3];
 }
 
-static bool ReadQuoted(const char **cursor, char *out, size_t size)
+static bool ReadQuoted(const char **cursor, const char *end, char *out, size_t size)
 {
-    const char *start;
-    const char *end;
+    const char *start = *cursor;
+    const char *close;
     size_t length;
 
-    start = strchr(*cursor, '"');
+    while (start < end && *start != '"')
+        start++;
 
-    if (!start)
+    if (start >= end)
         return false;
 
     start++;
-    end = strchr(start, '"');
+    close = start;
 
-    if (!end)
+    while (close < end && *close != '"')
+        close++;
+
+    if (close >= end)
         return false;
 
-    length = (size_t)(end - start);
+    length = (size_t)(close - start);
 
     if (length >= size)
         length = size - 1;
 
     memcpy(out, start, length);
     out[length] = '\0';
-    *cursor = end + 1;
+    *cursor = close + 1;
+
+    return true;
+}
+
+static bool ParsePlayerStartBlock(const char *start, const char *end, float *x, float *y, float *z)
+{
+    const char *cursor = start;
+    char key[64];
+    char value[64];
+    bool is_start = false;
+    bool has_origin = false;
+    float ox = 0.0f;
+    float oy = 0.0f;
+    float oz = 0.0f;
+
+    while (ReadQuoted(&cursor, end, key, sizeof(key)) &&
+           ReadQuoted(&cursor, end, value, sizeof(value)))
+    {
+        if (strcmp(key, "classname") == 0 && strcmp(value, "info_player_start") == 0)
+            is_start = true;
+
+        if (strcmp(key, "origin") == 0 && sscanf(value, "%f %f %f", &ox, &oy, &oz) == 3)
+            has_origin = true;
+    }
+
+    if (!is_start || !has_origin)
+        return false;
+
+    *x = ox;
+    *y = oy;
+    *z = oz;
 
     return true;
 }
@@ -348,36 +383,15 @@ bool BSP_GetPlayerStart(const BSP_Map *map, float *x, float *y, float *z)
 
     while ((cursor = strchr(cursor, '{')) != NULL)
     {
-        char key[64];
-        char value[64];
-        bool is_start = false;
-        bool has_origin = false;
-        float ox = 0.0f;
-        float oy = 0.0f;
-        float oz = 0.0f;
+        const char *end = strchr(cursor, '}');
 
-        cursor++;
+        if (!end)
+            break;
 
-        while (*cursor && *cursor != '}')
-        {
-            if (!ReadQuoted(&cursor, key, sizeof(key)) ||
-                !ReadQuoted(&cursor, value, sizeof(value)))
-                break;
-
-            if (strcmp(key, "classname") == 0 && strcmp(value, "info_player_start") == 0)
-                is_start = true;
-
-            if (strcmp(key, "origin") == 0 && sscanf(value, "%f %f %f", &ox, &oy, &oz) == 3)
-                has_origin = true;
-        }
-
-        if (is_start && has_origin)
-        {
-            *x = ox;
-            *y = oy;
-            *z = oz;
+        if (ParsePlayerStartBlock(cursor + 1, end, x, y, z))
             return true;
-        }
+
+        cursor = end + 1;
     }
 
     return false;
