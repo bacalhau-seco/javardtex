@@ -3,11 +3,6 @@
 #include "../include/defs.h"
 #include "../include/collision.h"
 
-#define MOVE_STEP 1.0f
-#define GROUND_CHECK 2.0f
-#define AIR_WISH_SPEED_CAP 30.0f
-#define STEP_HEIGHT 16.0f
-
 static float *Component(Vector3 *v, int axis)
 {
     if (axis == 0)
@@ -21,13 +16,14 @@ static float *Component(Vector3 *v, int axis)
 
 static bool IsStanding(const BSP_Map *map, Vector3 feet)
 {
-    feet.y -= GROUND_CHECK;
+    feet.y -= Cvar_Get("sv_groundcheck")->value;
     return Collision_IsSolid(map, feet);
 }
 
 static bool MoveAxis(const BSP_Map *map, Body *body, int axis, float distance)
 {
-    int steps = (int)ceilf(fabsf(distance) / MOVE_STEP);
+    float moveStep = Cvar_Get("sv_movestep")->value;
+    int steps = (int)ceilf(fabsf(distance) / moveStep);
     float step;
     int i;
 
@@ -53,6 +49,7 @@ static bool MoveAxis(const BSP_Map *map, Body *body, int axis, float distance)
 
 static bool MoveHorizontal(const BSP_Map *map, Body *body, int axis, float distance)
 {
+    float stepHeight = Cvar_Get("sv_stepheight")->value;
     Vector3 start = body->position;
     Vector3 blocked;
 
@@ -66,13 +63,13 @@ static bool MoveHorizontal(const BSP_Map *map, Body *body, int axis, float dista
 
     body->position = start;
 
-    if (!MoveAxis(map, body, 1, STEP_HEIGHT) || !MoveAxis(map, body, axis, distance))
+    if (!MoveAxis(map, body, 1, stepHeight) || !MoveAxis(map, body, axis, distance))
     {
         body->position = blocked;
         return false;
     }
 
-    MoveAxis(map, body, 1, -STEP_HEIGHT);
+    MoveAxis(map, body, 1, -stepHeight);
 
     return true;
 }
@@ -174,7 +171,8 @@ void UpdatePlayer(const BSP_Map *map, Body *body, float rot, char side, char for
     }
     else
     {
-        float airSpeed = wishSpeed < AIR_WISH_SPEED_CAP ? wishSpeed : AIR_WISH_SPEED_CAP;
+        float airCap = Cvar_Get("sv_airwishcap")->value;
+        float airSpeed = wishSpeed < airCap ? wishSpeed : airCap;
 
         Accelerate(body, body->dir, airSpeed, Cvar_Get("sv_airaccel")->value * Cvar_Get("sv_maxspeed")->value * delta);
     }
