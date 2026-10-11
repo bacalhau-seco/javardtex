@@ -4,7 +4,10 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include <raylib.h>
+
 #include "bsp.h"
+#include "lightmap.h"
 
 typedef struct {
     float x;
@@ -12,16 +15,24 @@ typedef struct {
     float z;
     float s;
     float t;
+    float lm_s;
+    float lm_t;
 } BSP_RenderVertex;
 
 typedef struct {
     uint32_t texture_id;
+    uint32_t vao;
+    uint32_t vbo;
     BSP_RenderVertex *vertices;
     int count;
     int capacity;
 } BSP_Batch;
 
 typedef struct {
+    Shader shader;
+    int mvp_loc;
+    int lightmap_loc;
+    BSP_Lightmap lightmap;
     BSP_Batch *batches;
     int num_batches;
 } BSP_Renderer;

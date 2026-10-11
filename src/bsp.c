@@ -186,7 +186,8 @@ static bool LoadMapLumps(FILE *file, const BSP_Lump *lumps, BSP_Map *map)
         && LoadArray(file, &lumps[BSP_LUMP_MARKSURFACES], sizeof(uint16_t), (void **)&map->marksurfaces, &map->num_marksurfaces)
         && LoadArray(file, &lumps[BSP_LUMP_EDGES], sizeof(BSP_Edge), (void **)&map->edges, &map->num_edges)
         && LoadArray(file, &lumps[BSP_LUMP_SURFEDGES], sizeof(int32_t), (void **)&map->surfedges, &map->num_surfedges)
-        && LoadArray(file, &lumps[BSP_LUMP_MODELS], sizeof(BSP_Model), (void **)&map->models, &map->num_models);
+        && LoadArray(file, &lumps[BSP_LUMP_MODELS], sizeof(BSP_Model), (void **)&map->models, &map->num_models)
+        && LoadArray(file, &lumps[BSP_LUMP_LIGHTING], 1, (void **)&map->lighting, &map->lighting_size);
 }
 
 bool BSP_Load(BSP_Map *map, const char *path)
@@ -236,6 +237,7 @@ void BSP_Free(BSP_Map *map)
 
     free(map->textures);
     free(map->entities);
+    free(map->lighting);
     free(map->planes);
     free(map->vertices);
     free(map->edges);

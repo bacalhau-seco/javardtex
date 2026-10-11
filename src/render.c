@@ -1,10 +1,51 @@
 #include "../include/render.h"
 
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <raylib.h>
+#include <raymath.h>
 #include <rlgl.h>
+
+#define DIFFUSE_TEXTURE_UNIT 0
+#define LIGHTMAP_TEXTURE_UNIT 1
+
+static const char *LightmapVertexShader =
+    "#version 330\n"
+    "layout(location = 0) in vec3 vertexPosition;\n"
+    "layout(location = 1) in vec2 vertexTexCoord;\n"
+    "layout(location = 5) in vec2 vertexLightmapCoord;\n"
+    "uniform mat4 mvp;\n"
+    "out vec2 fragTexCoord;\n"
+    "out vec2 fragLightmapCoord;\n"
+    "void main()\n"
+    "{\n"
+    "    fragTexCoord = vertexTexCoord;\n"
+    "    fragLightmapCoord = vertexLightmapCoord;\n"
+    "    gl_Position = mvp * vec4(vertexPosition, 1.0);\n"
+    "}\n";
+
+static const char *LightmapFragmentShader =
+    "#version 330\n"
+    "in vec2 fragTexCoord;\n"
+    "in vec2 fragLightmapCoord;\n"
+    "uniform sampler2D texture0;\n"
+    "uniform sampler2D lightmap;\n"
+    "out vec4 finalColor;\n"
+    "void main()\n"
+    "{\n"
+    "    vec4 diffuse = texture(texture0, fragTexCoord);\n"
+    "    if (diffuse.a < 0.5) discard;\n"
+    "    vec3 light = texture(lightmap, fragLightmapCoord).rgb * 2.0;\n"
+    "    finalColor = vec4(diffuse.rgb * light, 1.0);\n"
+    "}\n";
+
+typedef struct {
+    const BSP_TexInfo *texinfo;
+    const BSP_Texture *texture;
+    const BSP_FaceLightmap *lightmap;
+} FaceContext;
 
 static bool IsHiddenTexture(const char *name)
 {
@@ -55,11 +96,13 @@ static uint32_t CreateTexture(const BSP_Texture *texture)
     return gpu.id;
 }
 
-static void AppendVertex(BSP_Batch *batch, const BSP_TexInfo *texinfo, const BSP_Texture *texture, const BSP_Vertex *vertex)
+static void AppendVertex(BSP_Batch *batch, const FaceContext *context, const BSP_Vertex *vertex)
 {
     BSP_RenderVertex *out;
     float s;
     float t;
+    float lm_s;
+    float lm_t;
 
     if (batch->count == batch->capacity)
     {
@@ -73,20 +116,23 @@ static void AppendVertex(BSP_Batch *batch, const BSP_TexInfo *texinfo, const BSP
         batch->capacity = capacity;
     }
 
-    BSP_GetTexCoord(texinfo, vertex, &s, &t);
+    BSP_GetTexCoord(context->texinfo, vertex, &s, &t);
+    BSP_LightmapUV(context->lightmap, s, t, &lm_s, &lm_t);
 
     out = &batch->vertices[batch->count++];
     out->x = vertex->x;
     out->y = vertex->z;
     out->z = -vertex->y;
-    out->s = s / (float)texture->width;
-    out->t = -t / (float)texture->height;
+    out->s = s / (float)context->texture->width;
+    out->t = -t / (float)context->texture->height;
+    out->lm_s = lm_s;
+    out->lm_t = lm_t;
 }
 
-static void AddFace(BSP_Renderer *renderer, const BSP_Map *map, const BSP_Face *face)
+static void AddFace(BSP_Renderer *renderer, const BSP_Map *map, int index)
 {
-    const BSP_TexInfo *texinfo;
-    const BSP_Texture *texture;
+    const BSP_Face *face = &map->faces[index];
+    FaceContext context;
     BSP_Batch *batch;
     BSP_Vertex *vertices;
     int count;
@@ -95,13 +141,14 @@ static void AddFace(BSP_Renderer *renderer, const BSP_Map *map, const BSP_Face *
     if (face->texinfo >= map->num_texinfo)
         return;
 
-    texinfo = &map->texinfo[face->texinfo];
+    context.texinfo = &map->texinfo[face->texinfo];
 
-    if (texinfo->miptex < 0 || texinfo->miptex >= map->num_textures)
+    if (context.texinfo->miptex < 0 || context.texinfo->miptex >= map->num_textures)
         return;
 
-    batch = &renderer->batches[texinfo->miptex];
-    texture = &map->textures[texinfo->miptex];
+    context.texture = &map->textures[context.texinfo->miptex];
+    context.lightmap = &renderer->lightmap.faces[index];
+    batch = &renderer->batches[context.texinfo->miptex];
 
     if (batch->texture_id == 0 || face->numedges < 3)
         return;
@@ -115,16 +162,61 @@ static void AddFace(BSP_Renderer *renderer, const BSP_Map *map, const BSP_Face *
 
     for (i = 1; i + 1 < count; i++)
     {
-        AppendVertex(batch, texinfo, texture, &vertices[0]);
-        AppendVertex(batch, texinfo, texture, &vertices[i]);
-        AppendVertex(batch, texinfo, texture, &vertices[i + 1]);
+        AppendVertex(batch, &context, &vertices[0]);
+        AppendVertex(batch, &context, &vertices[i]);
+        AppendVertex(batch, &context, &vertices[i + 1]);
 
-        AppendVertex(batch, texinfo, texture, &vertices[i + 1]);
-        AppendVertex(batch, texinfo, texture, &vertices[i]);
-        AppendVertex(batch, texinfo, texture, &vertices[0]);
+        AppendVertex(batch, &context, &vertices[i + 1]);
+        AppendVertex(batch, &context, &vertices[i]);
+        AppendVertex(batch, &context, &vertices[0]);
     }
 
     free(vertices);
+}
+
+static void SetVertexAttributes(void)
+{
+    const int stride = (int)sizeof(BSP_RenderVertex);
+
+    rlSetVertexAttribute(RL_DEFAULT_SHADER_ATTRIB_LOCATION_POSITION, 3, RL_FLOAT, false, stride, (int)offsetof(BSP_RenderVertex, x));
+    rlSetVertexAttribute(RL_DEFAULT_SHADER_ATTRIB_LOCATION_TEXCOORD, 2, RL_FLOAT, false, stride, (int)offsetof(BSP_RenderVertex, s));
+    rlSetVertexAttribute(RL_DEFAULT_SHADER_ATTRIB_LOCATION_TEXCOORD2, 2, RL_FLOAT, false, stride, (int)offsetof(BSP_RenderVertex, lm_s));
+
+    rlEnableVertexAttribute(RL_DEFAULT_SHADER_ATTRIB_LOCATION_POSITION);
+    rlEnableVertexAttribute(RL_DEFAULT_SHADER_ATTRIB_LOCATION_TEXCOORD);
+    rlEnableVertexAttribute(RL_DEFAULT_SHADER_ATTRIB_LOCATION_TEXCOORD2);
+}
+
+static bool UploadBatch(BSP_Batch *batch)
+{
+    if (batch->count > 0)
+    {
+        batch->vao = rlLoadVertexArray();
+        rlEnableVertexArray(batch->vao);
+
+        batch->vbo = rlLoadVertexBuffer(batch->vertices, batch->count * (int)sizeof(BSP_RenderVertex), false);
+        rlEnableVertexBuffer(batch->vbo);
+        SetVertexAttributes();
+
+        rlDisableVertexArray();
+    }
+
+    free(batch->vertices);
+    batch->vertices = NULL;
+    batch->capacity = 0;
+
+    return batch->count == 0 || (batch->vao != 0 && batch->vbo != 0);
+}
+
+static void DrawBatch(const BSP_Batch *batch)
+{
+    if (batch->vao == 0)
+        return;
+
+    rlEnableTexture(batch->texture_id);
+    rlEnableVertexArray(batch->vao);
+    rlDrawVertexArray(0, batch->count);
+    rlDisableVertexArray();
 }
 
 bool BSP_RendererInit(BSP_Renderer *renderer, const BSP_Map *map)
@@ -136,13 +228,30 @@ bool BSP_RendererInit(BSP_Renderer *renderer, const BSP_Map *map)
 
     memset(renderer, 0, sizeof(*renderer));
 
+    if (!BSP_LightmapInit(&renderer->lightmap, map))
+        return false;
+
+    renderer->shader = LoadShaderFromMemory(LightmapVertexShader, LightmapFragmentShader);
+
+    if (renderer->shader.id == 0)
+    {
+        BSP_RendererShutdown(renderer);
+        return false;
+    }
+
+    renderer->mvp_loc = GetShaderLocation(renderer->shader, "mvp");
+    renderer->lightmap_loc = GetShaderLocation(renderer->shader, "lightmap");
+
     if (map->num_textures == 0)
         return true;
 
     renderer->batches = calloc((size_t)map->num_textures, sizeof(BSP_Batch));
 
     if (!renderer->batches)
+    {
+        BSP_RendererShutdown(renderer);
         return false;
+    }
 
     renderer->num_batches = map->num_textures;
 
@@ -157,7 +266,16 @@ bool BSP_RendererInit(BSP_Renderer *renderer, const BSP_Map *map)
     }
 
     for (i = 0; i < map->num_faces; i++)
-        AddFace(renderer, map, &map->faces[i]);
+        AddFace(renderer, map, i);
+
+    for (i = 0; i < renderer->num_batches; i++)
+    {
+        if (!UploadBatch(&renderer->batches[i]))
+        {
+            BSP_RendererShutdown(renderer);
+            return false;
+        }
+    }
 
     return true;
 }
@@ -171,48 +289,55 @@ void BSP_RendererShutdown(BSP_Renderer *renderer)
 
     for (i = 0; i < renderer->num_batches; i++)
     {
-        if (renderer->batches[i].texture_id)
-            rlUnloadTexture(renderer->batches[i].texture_id);
+        BSP_Batch *batch = &renderer->batches[i];
 
-        free(renderer->batches[i].vertices);
+        if (batch->texture_id)
+            rlUnloadTexture(batch->texture_id);
+
+        if (batch->vbo)
+            rlUnloadVertexBuffer(batch->vbo);
+
+        if (batch->vao)
+            rlUnloadVertexArray(batch->vao);
+
+        free(batch->vertices);
     }
 
     free(renderer->batches);
+
+    if (renderer->shader.id)
+        UnloadShader(renderer->shader);
+
+    BSP_LightmapShutdown(&renderer->lightmap);
     memset(renderer, 0, sizeof(*renderer));
 }
 
 void BSP_Render(const BSP_Renderer *renderer)
 {
+    const int lightmap_unit = LIGHTMAP_TEXTURE_UNIT;
+    Matrix mvp;
     int i;
-    int v;
 
-    if (!renderer)
+    if (!renderer || renderer->shader.id == 0)
         return;
 
+    rlDrawRenderBatchActive();
     rlDisableBackfaceCulling();
 
+    BeginShaderMode(renderer->shader);
+
+    mvp = MatrixMultiply(rlGetMatrixModelview(), rlGetMatrixProjection());
+    SetShaderValueMatrix(renderer->shader, renderer->mvp_loc, mvp);
+    SetShaderValue(renderer->shader, renderer->lightmap_loc, &lightmap_unit, SHADER_UNIFORM_INT);
+
+    rlActiveTextureSlot(LIGHTMAP_TEXTURE_UNIT);
+    rlEnableTexture(renderer->lightmap.texture_id);
+    rlActiveTextureSlot(DIFFUSE_TEXTURE_UNIT);
+
     for (i = 0; i < renderer->num_batches; i++)
-    {
-        const BSP_Batch *batch = &renderer->batches[i];
-
-        if (batch->count == 0)
-            continue;
-
-        rlSetTexture(batch->texture_id);
-        rlBegin(RL_TRIANGLES);
-
-        for (v = 0; v < batch->count; v++)
-        {
-            const BSP_RenderVertex *vertex = &batch->vertices[v];
-
-            rlTexCoord2f(vertex->s, vertex->t);
-            rlColor4ub(255, 255, 255, 255);
-            rlVertex3f(vertex->x, vertex->y, vertex->z);
-        }
-
-        rlEnd();
-    }
+        DrawBatch(&renderer->batches[i]);
 
     rlSetTexture(0);
+    EndShaderMode();
     rlEnableBackfaceCulling();
 }

@@ -22,6 +22,7 @@ int main(void)
 
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(screenWidth, screenHeight, "javardtex");
+    SetTargetFPS((int)Cvar_Get("cl_maxfps")->value);
 
     if (!BSP_Load(&bsp, "game/maps/test.bsp"))
     {

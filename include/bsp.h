@@ -113,6 +113,9 @@ typedef struct {
     char *entities;
     int entities_size;
 
+    uint8_t *lighting;
+    int lighting_size;
+
     BSP_Plane *planes;
     int num_planes;
 
