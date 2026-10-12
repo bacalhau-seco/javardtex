@@ -8,14 +8,12 @@ static Body player = { 0 };
 static BSP_Map bsp = { 0 };
 static BSP_Renderer bspRenderer = { 0 };
 static Vector2 lookRotation = { 0 };
-static float headLerp;
 GameState gameState = GAME_STATE_TITLE;
 static GameState oldGameState = GAME_STATE_TITLE;
 
 int main(void)
 {
     Cvar_Init();
-    headLerp = Cvar_Get("eyeheight")->value;
 
     const int screenWidth = Cvar_Get("hres")->value;
     const int screenHeight = Cvar_Get("vres")->value;
@@ -43,7 +41,7 @@ int main(void)
         player.position = spawn;
 
     Camera camera;
-    InitCamera(&camera, &player, headLerp);
+    InitCamera(&camera, &player);
 
     while (!WindowShouldClose())
     {
@@ -95,15 +93,7 @@ int main(void)
                 delta
             );
 
-            headLerp = Lerp(
-                headLerp,
-                player.isCrouched
-                    ? Cvar_Get("croucheyeheight")->value
-                    : Cvar_Get("eyeheight")->value,
-                20.0f * delta
-            );
-
-            Camera_Update(&camera, &player, lookRotation, headLerp);
+            Camera_Update(&camera, &player, lookRotation);
             break;
         }
 

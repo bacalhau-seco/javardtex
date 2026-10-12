@@ -26,6 +26,13 @@ float Collision_PlayerHeight(bool crouched)
         : Cvar_Value("standheight", 72.0f);
 }
 
+float Collision_EyeHeight(bool crouched)
+{
+    float height = Collision_PlayerHeight(crouched);
+
+    return height - height / 5.0f;
+}
+
 static Vector3 Collision_FeetToOrigin(Vector3 feet, bool crouched)
 {
     feet.y += Collision_PlayerHeight(crouched) * 0.5f;

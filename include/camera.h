@@ -4,6 +4,6 @@
 #include "raylib.h"
 #include "raymath.h"
 
-void Camera_Update(Camera *camera, const Body *player, Vector2 lookRotation, float headLerp);
+void Camera_Update(Camera *camera, const Body *player, Vector2 lookRotation);
 
-void InitCamera(Camera *camera, const Body *player, float headLerp);
+void InitCamera(Camera *camera, const Body *player);

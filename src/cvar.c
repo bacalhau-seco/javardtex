@@ -86,8 +86,6 @@ void Cvar_Init(void)
     Cvar_Register("stopspeed", 100.0f);
     Cvar_Register("standheight", 72.0f);
     Cvar_Register("crouchheight", 36.0f);
-    Cvar_Register("eyeheight", 62.0f);
-    Cvar_Register("croucheyeheight", 32.0f);
     Cvar_Register("accel", 5.0f);
     Cvar_Register("airaccel", 10.0f);
     Cvar_Register("airwishcap", 30.0f);

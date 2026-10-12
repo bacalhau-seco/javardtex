@@ -1,16 +1,21 @@
 #include "../include/camera.h"
+#include "../include/collision.h"
 #include "../include/defs.h"
+
+static Vector3 EyePosition(const Body *player)
+{
+    return (Vector3){
+        player->position.x,
+        player->position.y + Collision_EyeHeight(player->isCrouched),
+        player->position.z,
+    };
+}
 
 void Camera_Update(Camera *camera,
                    const Body *player,
-                   Vector2 lookRotation,
-                   float headLerp)
+                   Vector2 lookRotation)
 {
-    camera->position = (Vector3){
-        player->position.x,
-        player->position.y + headLerp,
-        player->position.z,
-    };
+    camera->position = EyePosition(player);
 
     const Vector3 up = { 0.0f, 1.0f, 0.0f };
     const Vector3 forward = { 0.0f, 0.0f, -1.0f };
@@ -27,15 +32,11 @@ void Camera_Update(Camera *camera,
     camera->target = Vector3Add(camera->position, dir);
 }
 
-void InitCamera(Camera *camera, const Body *player, float headLerp)
+void InitCamera(Camera *camera, const Body *player)
 {
     *camera = (Camera){0};
 
     camera->fovy = Cvar_Get("fov")->value;
     camera->projection = CAMERA_PERSPECTIVE;
-    camera->position = (Vector3){
-        player->position.x,
-        player->position.y + headLerp,
-        player->position.z,
-    };
+    camera->position = EyePosition(player);
 }
