@@ -15,14 +15,14 @@ static GameState oldGameState = GAME_STATE_TITLE;
 int main(void)
 {
     Cvar_Init();
-    headLerp = Cvar_Get("sv_standheight")->value;
+    headLerp = Cvar_Get("eyeheight")->value;
 
-    const int screenWidth = Cvar_Get("cl_hres")->value;
-    const int screenHeight = Cvar_Get("cl_vres")->value;
+    const int screenWidth = Cvar_Get("hres")->value;
+    const int screenHeight = Cvar_Get("vres")->value;
 
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(screenWidth, screenHeight, "javardtex");
-    SetTargetFPS((int)Cvar_Get("cl_maxfps")->value);
+    SetTargetFPS((int)Cvar_Get("maxfps")->value);
 
     if (!BSP_Load(&bsp, "game/maps/test.bsp"))
     {
@@ -80,8 +80,8 @@ int main(void)
             break;
 
         case GAME_STATE_GAME:
-            lookRotation.x -= in.mouse.x * Cvar_Get("cl_mouseh")->value;
-            lookRotation.y += in.mouse.y * Cvar_Get("cl_mousev")->value;
+            lookRotation.x -= in.mouse.x * Cvar_Get("mouseh")->value;
+            lookRotation.y += in.mouse.y * Cvar_Get("mousev")->value;
             lookRotation.y = Clamp(lookRotation.y, -PI/2+0.001f, PI/2-0.001f);
 
             UpdatePlayer(
@@ -97,17 +97,11 @@ int main(void)
 
             headLerp = Lerp(
                 headLerp,
-                in.crouch
-                    ? Cvar_Get("sv_crouchheight")->value
-                    : Cvar_Get("sv_standheight")->value,
+                player.isCrouched
+                    ? Cvar_Get("croucheyeheight")->value
+                    : Cvar_Get("eyeheight")->value,
                 20.0f * delta
             );
-
-            camera.position = (Vector3){
-                player.position.x,
-                player.position.y + (Cvar_Get("sv_bottomheight")->value + headLerp),
-                player.position.z
-            };
 
             Camera_Update(&camera, &player, lookRotation, headLerp);
             break;
@@ -119,7 +113,7 @@ int main(void)
             switch (gameState)
             {
             case GAME_STATE_TITLE:
-                CL_Title();
+                Title_Draw();
                 break;
 
             case GAME_STATE_PAUSE:

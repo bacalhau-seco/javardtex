@@ -19,7 +19,6 @@
 
 * Planar reflections
 * RayTracing
-* Lua scripting
 * Destructible environments
 * AI navigation
 * Decals
@@ -55,7 +54,6 @@ Game assets are stored in `game/`.
 * [x] Game version
 * [x] Basic game configuration
 * [x] Basic title screen
-* [x] Initial server structure
 
 ### September 2026
 
@@ -83,7 +81,7 @@ Game assets are stored in `game/`.
 
 ### December 2026
 
-* [ ] Client commands
+* [ ] Console commands
 * [ ] Game rules
 * [ ] Game-specific Cvars
 

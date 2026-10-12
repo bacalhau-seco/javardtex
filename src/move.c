@@ -14,15 +14,25 @@ static float *Component(Vector3 *v, int axis)
     return &v->z;
 }
 
-static bool IsStanding(const BSP_Map *map, Vector3 feet)
+static bool IsStanding(const BSP_Map *map, const Body *body)
 {
-    feet.y -= Cvar_Get("sv_groundcheck")->value;
-    return Collision_IsSolid(map, feet);
+    Vector3 feet = body->position;
+
+    feet.y -= Cvar_Get("groundcheck")->value;
+    return Collision_IsSolid(map, feet, body->isCrouched);
+}
+
+static void UpdateCrouch(const BSP_Map *map, Body *body, bool crouchHold)
+{
+    if (crouchHold)
+        body->isCrouched = true;
+    else if (body->isCrouched && !Collision_IsSolid(map, body->position, false))
+        body->isCrouched = false;
 }
 
 static bool MoveAxis(const BSP_Map *map, Body *body, int axis, float distance)
 {
-    float moveStep = Cvar_Get("sv_movestep")->value;
+    float moveStep = Cvar_Get("movestep")->value;
     int steps = (int)ceilf(fabsf(distance) / moveStep);
     float step;
     int i;
@@ -38,7 +48,7 @@ static bool MoveAxis(const BSP_Map *map, Body *body, int axis, float distance)
 
         *Component(&next, axis) += step;
 
-        if (Collision_IsSolid(map, next))
+        if (Collision_IsSolid(map, next, body->isCrouched))
             return false;
 
         body->position = next;
@@ -49,7 +59,7 @@ static bool MoveAxis(const BSP_Map *map, Body *body, int axis, float distance)
 
 static bool MoveHorizontal(const BSP_Map *map, Body *body, int axis, float distance)
 {
-    float stepHeight = Cvar_Get("sv_stepheight")->value;
+    float stepHeight = Cvar_Get("stepheight")->value;
     Vector3 start = body->position;
     Vector3 blocked;
 
@@ -78,7 +88,7 @@ void Body_OnLand(Body *body)
 {
     Vector3 hvel = { .x = body->velocity.x, .y = 0.0f, .z = body->velocity.z };
     float speed = Vector3Length(hvel);
-    float penalty = Cvar_Get("sv_jumppenalty")->value;
+    float penalty = Cvar_Get("jumppenalty")->value;
 
     if (speed > penalty)
     {
@@ -99,13 +109,13 @@ static void ApplyFriction(Body *body, bool crouchHold, float delta)
     if (speed <= 0.001f)
         return;
 
-    friction = Cvar_Get("sv_friction")->value;
+    friction = Cvar_Get("friction")->value;
 
     if (crouchHold)
         friction *= 2.0f;
 
-    control = speed < Cvar_Get("sv_stopspeed")->value
-        ? Cvar_Get("sv_stopspeed")->value
+    control = speed < Cvar_Get("stopspeed")->value
+        ? Cvar_Get("stopspeed")->value
         : speed;
 
     newSpeed = speed - delta * control * friction;
@@ -143,6 +153,8 @@ void UpdatePlayer(const BSP_Map *map, Body *body, float rot, char side, char for
     float wishSpeed;
     bool wasGrounded = body->isGrounded;
 
+    UpdateCrouch(map, body, crouchHold);
+
     if (side != 0 && forward != 0)
         input = Vector2Normalize(input);
 
@@ -153,28 +165,28 @@ void UpdatePlayer(const BSP_Map *map, Body *body, float rot, char side, char for
     };
 
     body->dir = Vector3Normalize(wish);
-    wishSpeed = Vector3Length(body->dir) * Cvar_Get("sv_maxspeed")->value;
+    wishSpeed = Vector3Length(body->dir) * Cvar_Get("maxspeed")->value;
 
     if (body->isGrounded && jumpPressed)
     {
-        body->velocity.y = Cvar_Get("sv_jumpforce")->value;
+        body->velocity.y = Cvar_Get("jumpforce")->value;
         body->isGrounded = false;
     }
 
     if (!body->isGrounded)
-        body->velocity.y -= Cvar_Get("sv_gravity")->value * delta;
+        body->velocity.y -= Cvar_Get("gravity")->value * delta;
 
     if (body->isGrounded)
     {
         ApplyFriction(body, crouchHold, delta);
-        Accelerate(body, body->dir, wishSpeed, Cvar_Get("sv_accel")->value * wishSpeed * delta);
+        Accelerate(body, body->dir, wishSpeed, Cvar_Get("accel")->value * wishSpeed * delta);
     }
     else
     {
-        float airCap = Cvar_Get("sv_airwishcap")->value;
+        float airCap = Cvar_Get("airwishcap")->value;
         float airSpeed = wishSpeed < airCap ? wishSpeed : airCap;
 
-        Accelerate(body, body->dir, airSpeed, Cvar_Get("sv_airaccel")->value * Cvar_Get("sv_maxspeed")->value * delta);
+        Accelerate(body, body->dir, airSpeed, Cvar_Get("airaccel")->value * Cvar_Get("maxspeed")->value * delta);
     }
 
     if (!MoveHorizontal(map, body, 0, body->velocity.x * delta))
@@ -186,7 +198,7 @@ void UpdatePlayer(const BSP_Map *map, Body *body, float rot, char side, char for
     if (!MoveAxis(map, body, 1, body->velocity.y * delta))
         body->velocity.y = 0.0f;
 
-    body->isGrounded = body->velocity.y <= 0.0f && IsStanding(map, body->position);
+    body->isGrounded = body->velocity.y <= 0.0f && IsStanding(map, body);
 
     if (body->isGrounded)
         body->velocity.y = 0.0f;

@@ -63,29 +63,36 @@ Cvar *Cvar_Get(const char *name)
     return NULL;
 }
 
+float Cvar_Value(const char *name, float fallback)
+{
+    const Cvar *cvar = Cvar_Get(name);
+
+    return cvar ? cvar->value : fallback;
+}
+
 void Cvar_Init(void)
 {
-    Cvar_Register("cl_fov", 90.0f);
-    Cvar_Register("cl_mouseh", 0.001f);
-    Cvar_Register("cl_mousev", 0.001f);
-    Cvar_Register("cl_maxfps", 90);
-    Cvar_Register("cl_hres", 1280);
-    Cvar_Register("cl_vres", 960);
+    Cvar_Register("fov", 90.0f);
+    Cvar_Register("mouseh", 0.001f);
+    Cvar_Register("mousev", 0.001f);
+    Cvar_Register("maxfps", 90);
+    Cvar_Register("hres", 1280);
+    Cvar_Register("vres", 960);
 
-    Cvar_Register("sv_gravity", 800.0f);
-    Cvar_Register("sv_maxspeed", 290.0f);
-    Cvar_Register("sv_jumpforce", 270.0f);
-    Cvar_Register("sv_friction", 4.0f);
-    Cvar_Register("sv_stopspeed", 100.0f);
-    Cvar_Register("sv_standheight", 56.0f);
-    Cvar_Register("sv_bottomheight", 32.0f);
-    Cvar_Register("sv_crouchheight", 32.0f);
-    Cvar_Register("sv_accel", 5.0f);
-    Cvar_Register("sv_airaccel", 10.0f);
-    Cvar_Register("sv_airwishcap", 30.0f);
-    Cvar_Register("sv_jumppenalty", 0.0f);
-    Cvar_Register("sv_tickrate", 128);
-    Cvar_Register("sv_movestep", 1.0f);
-    Cvar_Register("sv_groundcheck", 2.0f);
-    Cvar_Register("sv_stepheight", 16.0f);
+    Cvar_Register("gravity", 800.0f);
+    Cvar_Register("maxspeed", 290.0f);
+    Cvar_Register("jumpforce", 270.0f);
+    Cvar_Register("friction", 4.0f);
+    Cvar_Register("stopspeed", 100.0f);
+    Cvar_Register("standheight", 72.0f);
+    Cvar_Register("crouchheight", 36.0f);
+    Cvar_Register("eyeheight", 62.0f);
+    Cvar_Register("croucheyeheight", 32.0f);
+    Cvar_Register("accel", 5.0f);
+    Cvar_Register("airaccel", 10.0f);
+    Cvar_Register("airwishcap", 30.0f);
+    Cvar_Register("jumppenalty", 0.0f);
+    Cvar_Register("movestep", 1.0f);
+    Cvar_Register("groundcheck", 2.0f);
+    Cvar_Register("stepheight", 16.0f);
 }

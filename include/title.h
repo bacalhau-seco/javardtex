@@ -1,6 +1,6 @@
-#ifndef CL_TITLE_H
-#define CL_TITLE_H
+#ifndef TITLE_H
+#define TITLE_H
 
-void CL_Title(void);
+void Title_Draw(void);
 
 #endif

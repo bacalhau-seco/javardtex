@@ -1,6 +1,6 @@
 #include "../include/defs.h"
 
-void CL_Title(void)
+void Title_Draw(void)
 {
     const int titleSize = 48;
     const int versionSize = 20;

@@ -1,6 +1,5 @@
 #include "../include/collision.h"
-
-#define PLAYER_FEET_TO_ORIGIN 36.0f
+#include "../include/cvar.h"
 
 static Vector3 WorldToQuake(Vector3 w)
 {
@@ -20,6 +19,20 @@ static float PlaneDistance(const BSP_Plane *plane, Vector3 p)
         - plane->dist;
 }
 
+float Collision_PlayerHeight(bool crouched)
+{
+    return crouched
+        ? Cvar_Value("crouchheight", 36.0f)
+        : Cvar_Value("standheight", 72.0f);
+}
+
+static Vector3 Collision_FeetToOrigin(Vector3 feet, bool crouched)
+{
+    feet.y += Collision_PlayerHeight(crouched) * 0.5f;
+
+    return feet;
+}
+
 bool Collision_GetSpawn(const BSP_Map *map, Vector3 *feet)
 {
     float x;
@@ -30,37 +43,36 @@ bool Collision_GetSpawn(const BSP_Map *map, Vector3 *feet)
         return false;
 
     *feet = QuakeToWorld((Vector3){ x, y, z });
-    feet->y -= PLAYER_FEET_TO_ORIGIN;
+    feet->y -= Collision_PlayerHeight(false) * 0.5f;
 
     return true;
 }
 
-bool Collision_IsSolid(const BSP_Map *map, Vector3 feet)
+bool Collision_IsSolid(const BSP_Map *map, Vector3 feet, bool crouched)
 {
     Vector3 origin;
     int num;
 
-    if (!map || map->num_models == 0)
+    if (!map || map->num_models == 0 || !map->clipnodes || !map->planes)
         return false;
 
-    origin = feet;
-    origin.y += PLAYER_FEET_TO_ORIGIN;
-    origin = WorldToQuake(origin);
+    origin = WorldToQuake(Collision_FeetToOrigin(feet, crouched));
 
-    num = map->models[0].headnode[BSP_HULL_PLAYER];
+    num = map->models[0].headnode[crouched ? BSP_HULL_CROUCH : BSP_HULL_PLAYER];
 
     while (num >= 0)
     {
         const BSP_ClipNode *node;
-        const BSP_Plane *plane;
 
         if (num >= map->num_clipnodes)
             return false;
 
         node = &map->clipnodes[num];
-        plane = &map->planes[node->planenum];
 
-        num = node->children[PlaneDistance(plane, origin) < 0.0f ? 1 : 0];
+        if (node->planenum < 0 || node->planenum >= map->num_planes)
+            return false;
+
+        num = node->children[PlaneDistance(&map->planes[node->planenum], origin) < 0.0f ? 1 : 0];
     }
 
     return num == BSP_CONTENTS_SOLID;

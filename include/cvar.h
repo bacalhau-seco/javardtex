@@ -10,5 +10,6 @@ typedef struct
 void Cvar_Init(void);
 Cvar *Cvar_Register(const char *name, float value);
 Cvar *Cvar_Get(const char *name);
+float Cvar_Value(const char *name, float fallback);
 
 #endif

@@ -10,6 +10,7 @@ typedef struct {
     Vector3 velocity;
     Vector3 dir;
     bool isGrounded;
+    bool isCrouched;
 } Body;
 
 void UpdatePlayer(const BSP_Map *map, Body *body, float rot, char side, char forward, bool jumpPressed, bool crouchHold, float delta);

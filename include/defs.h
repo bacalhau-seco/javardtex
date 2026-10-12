@@ -1,4 +1,4 @@
-// Main client header file
+// Main engine header file
 #include "raylib.h"
 #include "raymath.h"
 #include <stdbool.h>

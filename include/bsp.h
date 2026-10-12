@@ -11,6 +11,7 @@
 #define BSP_CONTENTS_EMPTY -1
 #define BSP_CONTENTS_SOLID -2
 #define BSP_HULL_PLAYER 1
+#define BSP_HULL_CROUCH 3
 
 #define BSP_LUMP_ENTITIES      0
 #define BSP_LUMP_PLANES        1
