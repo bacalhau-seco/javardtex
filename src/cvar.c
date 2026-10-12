@@ -82,7 +82,7 @@ void Cvar_Init(void)
     Cvar_Register("gravity", 800.0f);
     Cvar_Register("maxspeed", 290.0f);
     Cvar_Register("jumpforce", 270.0f);
-    Cvar_Register("friction", 4.0f);
+    Cvar_Register("friction", 5.0f);
     Cvar_Register("stopspeed", 100.0f);
     Cvar_Register("standheight", 72.0f);
     Cvar_Register("crouchheight", 36.0f);

@@ -24,10 +24,37 @@ static bool IsStanding(const BSP_Map *map, const Body *body)
 
 static void UpdateCrouch(const BSP_Map *map, Body *body, bool crouchHold)
 {
+    float heightDiff = Collision_PlayerHeight(false) - Collision_PlayerHeight(true);
+
+    if (body->isGrounded)
+        body->crouchFeetOffset = 0.0f;
+
     if (crouchHold)
-        body->isCrouched = true;
-    else if (body->isCrouched && !Collision_IsSolid(map, body->position, false))
-        body->isCrouched = false;
+    {
+        if (!body->isCrouched)
+        {
+            if (!body->isGrounded)
+            {
+                body->position.y += heightDiff;
+                body->crouchFeetOffset = heightDiff;
+            }
+
+            body->isCrouched = true;
+        }
+    }
+    else if (body->isCrouched)
+    {
+        Vector3 stood = body->position;
+
+        stood.y -= body->crouchFeetOffset;
+
+        if (!Collision_IsSolid(map, stood, false))
+        {
+            body->position = stood;
+            body->crouchFeetOffset = 0.0f;
+            body->isCrouched = false;
+        }
+    }
 }
 
 static bool MoveAxis(const BSP_Map *map, Body *body, int axis, float distance)
