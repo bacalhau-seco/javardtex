@@ -8,6 +8,7 @@
 #include <rlgl.h>
 
 #define LIGHTMAP_CHANNELS 3
+#define LIGHTMAP_PADDING 1
 
 typedef struct {
     int min_s;
@@ -82,20 +83,20 @@ static bool PackRect(Packer *packer, int width, int height, int *out_x, int *out
     if (width > LIGHTMAP_SIZE || height > LIGHTMAP_SIZE)
         return false;
 
-    if (packer->x + width > LIGHTMAP_SIZE)
+    if (packer->x + width + LIGHTMAP_PADDING > LIGHTMAP_SIZE)
     {
         packer->x = 0;
-        packer->y += packer->shelf;
+        packer->y += packer->shelf + LIGHTMAP_PADDING;
         packer->shelf = 0;
     }
 
-    if (packer->y + height > LIGHTMAP_SIZE)
+    if (packer->y + height + LIGHTMAP_PADDING > LIGHTMAP_SIZE)
         return false;
 
     *out_x = packer->x;
     *out_y = packer->y;
 
-    packer->x += width;
+    packer->x += width + LIGHTMAP_PADDING;
 
     if (height > packer->shelf)
         packer->shelf = height;
@@ -147,7 +148,7 @@ bool BSP_LightmapInit(BSP_Lightmap *lightmap, const BSP_Map *map)
     if (!lightmap->faces)
         return false;
 
-    atlas = GenImageColor(LIGHTMAP_SIZE, LIGHTMAP_SIZE, WHITE);
+    atlas = GenImageColor(LIGHTMAP_SIZE, LIGHTMAP_SIZE, BLACK);
 
     for (i = 0; i < map->num_faces; i++)
     {
@@ -209,6 +210,21 @@ void BSP_LightmapUV(const BSP_FaceLightmap *face, float s, float t, float *u, fl
         return;
     }
 
-    *u = ((float)face->x + s / LIGHTMAP_LUXEL_SIZE - face->min_s + 0.5f) / LIGHTMAP_SIZE;
-    *v = ((float)face->y + t / LIGHTMAP_LUXEL_SIZE - face->min_t + 0.5f) / LIGHTMAP_SIZE;
+    float lx = s / LIGHTMAP_LUXEL_SIZE - (float)face->min_s;
+    float ly = t / LIGHTMAP_LUXEL_SIZE - (float)face->min_t;
+
+    if (lx < 0.0f)
+        lx = 0.0f;
+
+    if (ly < 0.0f)
+        ly = 0.0f;
+
+    if (lx > (float)face->width - 1.0f)
+        lx = (float)face->width - 1.0f;
+
+    if (ly > (float)face->height - 1.0f)
+        ly = (float)face->height - 1.0f;
+
+    *u = ((float)face->x + lx + 0.5f) / LIGHTMAP_SIZE;
+    *v = ((float)face->y + ly + 0.5f) / LIGHTMAP_SIZE;
 }

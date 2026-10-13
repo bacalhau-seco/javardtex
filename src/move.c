@@ -44,15 +44,25 @@ static void UpdateCrouch(const BSP_Map *map, Body *body, bool crouchHold)
     }
     else if (body->isCrouched)
     {
-        Vector3 stood = body->position;
+        float moveStep = Cvar_Get("movestep")->value;
+        float drop;
 
-        stood.y -= body->crouchFeetOffset;
+        if (moveStep <= 0.0f)
+            moveStep = 1.0f;
 
-        if (!Collision_IsSolid(map, stood, false))
+        for (drop = body->crouchFeetOffset; drop <= heightDiff; drop += moveStep)
         {
+            Vector3 stood = body->position;
+
+            stood.y -= drop;
+
+            if (Collision_IsSolid(map, stood, false))
+                continue;
+
             body->position = stood;
             body->crouchFeetOffset = 0.0f;
             body->isCrouched = false;
+            break;
         }
     }
 }

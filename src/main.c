@@ -3,6 +3,7 @@
 #include "../include/bsp.h"
 #include "../include/render.h"
 #include "../include/collision.h"
+#include "../include/args.h"
 
 static Body player = { 0 };
 static BSP_Map bsp = { 0 };
@@ -11,8 +12,13 @@ static Vector2 lookRotation = { 0 };
 GameState gameState = GAME_STATE_TITLE;
 static GameState oldGameState = GAME_STATE_TITLE;
 
-int main(void)
+int main(int argc, char **argv)
 {
+    Args args;
+
+    if (!Args_Parse(&args, argc, argv))
+        return 1;
+
     Cvar_Init();
 
     const int screenWidth = Cvar_Get("hres")->value;
@@ -22,7 +28,7 @@ int main(void)
     InitWindow(screenWidth, screenHeight, "javardtex");
     SetTargetFPS((int)Cvar_Get("maxfps")->value);
 
-    if (!BSP_Load(&bsp, "game/maps/test.bsp"))
+    if (!BSP_Load(&bsp, args.mapPath))
     {
         CloseWindow();
         return 1;

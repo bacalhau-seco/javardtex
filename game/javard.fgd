@@ -1,3 +1,17 @@
+@SolidClass = worldspawn : "World entity"
+[
+    wad(string) : "Texture WAD files"
+    message(string) : "Map title"
+    light(integer) : "Ambient light" : 10
+    _sunlight(integer) : "Sunlight brightness" : 0
+    _sunlight_color(color255) : "Sunlight color" : "255 255 255"
+    _sun_mangle(string) : "Sun direction (yaw pitch roll)" : "0 -90 0"
+]
+
+@SolidClass = func_detail : "Detail brush (no vis blocking)" []
+
+@SolidClass = func_group : "Brush group (merged into world)" []
+
 @PointClass size(-16 -16 -36, 16 16 36) color(0 255 0) = info_player_start : "Player start"
 [
     angle(integer) : "Yaw" : 0
@@ -5,13 +19,13 @@
 
 @PointClass size(-8 -8 -8, 8 8 8) color(255 255 0) = light : "Light"
 [
-    _light(string) : "Color and brightness (R G B intensity)" : "255 255 255 200"
-    style(integer) : "Animation style" : 0
-    _fade(string) : "Distance fade" : "1.0"
-    _falloff(choices) : "Falloff" : 0 =
-    [
-        0 : "Inverse distance"
-        1 : "Inverse distance squared"
-        2 : "Linear"
-    ]
+    _light(color255) : "Color and brightness (R G B intensity)" : "255 255 255 500"
+]
+
+@PointClass size(-8 -8 -8, 8 8 8) color(255 128 0) = light_spot : "Spotlight"
+[
+    target(target_destination) : "Aim at this entity"
+    _light(color255) : "Color and brightness (R G B intensity)" : "255 255 255 800"
+    mangle(string) : "Direction (yaw pitch roll)" : "0 -90 0"
+    angle(integer) : "Cone angle" : 40
 ]

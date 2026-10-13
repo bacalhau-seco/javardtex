@@ -71,7 +71,7 @@ Game assets are stored in `game/`.
 * [ ] Map entities
 * [ ] Basic entity processing
 * [ ] Basic triggers
-* [ ] TrenchBroom FGD support
+* [x] TrenchBroom FGD support
 
 ### November 2026
 
