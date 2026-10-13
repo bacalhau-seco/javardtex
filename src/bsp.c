@@ -1,5 +1,7 @@
 #include "../include/bsp.h"
 
+#include "raymath.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -68,7 +70,7 @@ static bool LoadArray(FILE *file, const BSP_Lump *lump, size_t element_size, voi
     return true;
 }
 
-static bool LoadTexture(const uint8_t *miptex, size_t available, BSP_Texture *texture)
+static bool LoadMipTexture(const uint8_t *miptex, size_t available, BSP_Texture *texture)
 {
     int32_t width;
     int32_t height;
@@ -162,7 +164,7 @@ static bool LoadTextures(FILE *file, const BSP_Lump *lump, BSP_Map *map)
         if (offset < 0 || offset >= lump->length)
             continue;
 
-        LoadTexture(data + offset, (size_t)(lump->length - offset), &map->textures[i]);
+        LoadMipTexture(data + offset, (size_t)(lump->length - offset), &map->textures[i]);
     }
 
     ok = true;
@@ -177,7 +179,7 @@ static bool LoadMapLumps(FILE *file, const BSP_Lump *lumps, BSP_Map *map)
     return LoadArray(file, &lumps[BSP_LUMP_ENTITIES], 1, (void **)&map->entities, &map->entities_size)
         && LoadArray(file, &lumps[BSP_LUMP_PLANES], sizeof(BSP_Plane), (void **)&map->planes, &map->num_planes)
         && LoadTextures(file, &lumps[BSP_LUMP_TEXTURES], map)
-        && LoadArray(file, &lumps[BSP_LUMP_VERTICES], sizeof(BSP_Vertex), (void **)&map->vertices, &map->num_vertices)
+        && LoadArray(file, &lumps[BSP_LUMP_VERTICES], sizeof(Vector3), (void **)&map->vertices, &map->num_vertices)
         && LoadArray(file, &lumps[BSP_LUMP_NODES], sizeof(BSP_Node), (void **)&map->nodes, &map->num_nodes)
         && LoadArray(file, &lumps[BSP_LUMP_TEXINFO], sizeof(BSP_TexInfo), (void **)&map->texinfo, &map->num_texinfo)
         && LoadArray(file, &lumps[BSP_LUMP_FACES], sizeof(BSP_Face), (void **)&map->faces, &map->num_faces)
@@ -261,7 +263,7 @@ BSP_Texture *BSP_GetTexture(BSP_Map *map, int index)
     return &map->textures[index];
 }
 
-static bool GetSurfedgeVertex(const BSP_Map *map, int32_t surfedge, BSP_Vertex *out)
+static bool GetSurfedgeVertex(const BSP_Map *map, int32_t surfedge, Vector3 *out)
 {
     int32_t edge_index = surfedge < 0 ? -surfedge : surfedge;
     uint16_t vertex_index;
@@ -278,7 +280,7 @@ static bool GetSurfedgeVertex(const BSP_Map *map, int32_t surfedge, BSP_Vertex *
     return true;
 }
 
-int BSP_GetFaceVertices(const BSP_Map *map, const BSP_Face *face, BSP_Vertex *out)
+int BSP_GetFaceVertices(const BSP_Map *map, const BSP_Face *face, Vector3 *out)
 {
     int i;
 
@@ -297,7 +299,7 @@ int BSP_GetFaceVertices(const BSP_Map *map, const BSP_Face *face, BSP_Vertex *ou
     return face->numedges;
 }
 
-void BSP_GetTexCoord(const BSP_TexInfo *texinfo, const BSP_Vertex *vertex, float *s, float *t)
+void BSP_GetTexCoord(const BSP_TexInfo *texinfo, const Vector3 *vertex, float *s, float *t)
 {
     *s = vertex->x * texinfo->vecs[0][0]
         + vertex->y * texinfo->vecs[0][1]
@@ -416,7 +418,7 @@ static bool ParseNextLevelBlock(const BSP_Map *map, const char *start, const cha
     bool is_next_level = false;
     bool has_map = false;
     int model_index = -1;
-    float offset[3] = { 0.0f, 0.0f, 0.0f };
+    Vector3 offset = { 0.0f, 0.0f, 0.0f };
     BSP_NextLevel found = { 0 };
 
     while (ReadQuoted(&cursor, end, key, sizeof(key)) &&
@@ -429,7 +431,7 @@ static bool ParseNextLevelBlock(const BSP_Map *map, const char *start, const cha
             sscanf(value + 1, "%d", &model_index);
 
         if (strcmp(key, "origin") == 0)
-            sscanf(value, "%f %f %f", &offset[0], &offset[1], &offset[2]);
+            sscanf(value, "%f %f %f", &offset.x, &offset.y, &offset.z);
 
         if (strcmp(key, "map") == 0 && value[0] != '\0')
         {
@@ -444,11 +446,8 @@ static bool ParseNextLevelBlock(const BSP_Map *map, const char *start, const cha
     if (!map->models || model_index < 0 || model_index >= map->num_models)
         return false;
 
-    for (int i = 0; i < 3; i++)
-    {
-        found.mins[i] = map->models[model_index].mins[i] + offset[i];
-        found.maxs[i] = map->models[model_index].maxs[i] + offset[i];
-    }
+    found.mins = Vector3Add(map->models[model_index].mins, offset);
+    found.maxs = Vector3Add(map->models[model_index].maxs, offset);
 
     *out = found;
 

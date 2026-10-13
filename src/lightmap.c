@@ -26,7 +26,7 @@ typedef struct {
 static bool ComputeExtents(const BSP_Map *map, const BSP_Face *face, LightmapExtents *extents)
 {
     const BSP_TexInfo *texinfo;
-    BSP_Vertex *vertices;
+    Vector3 *vertices;
     float min_s;
     float max_s;
     float min_t;
@@ -38,7 +38,7 @@ static bool ComputeExtents(const BSP_Map *map, const BSP_Face *face, LightmapExt
         return false;
 
     texinfo = &map->texinfo[face->texinfo];
-    vertices = malloc(sizeof(BSP_Vertex) * face->numedges);
+    vertices = malloc(sizeof(Vector3) * face->numedges);
 
     if (!vertices)
         return false;

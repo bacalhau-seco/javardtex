@@ -1,6 +1,8 @@
 #include "../include/collision.h"
 #include "../include/cvar.h"
 
+#include "raymath.h"
+
 #include <stdio.h>
 
 #define COLLISION_PLAYER_HALF_WIDTH 16.0f
@@ -17,10 +19,7 @@ static Vector3 QuakeToWorld(Vector3 q)
 
 static float PlaneDistance(const BSP_Plane *plane, Vector3 p)
 {
-    return plane->normal[0] * p.x
-        + plane->normal[1] * p.y
-        + plane->normal[2] * p.z
-        - plane->dist;
+    return Vector3DotProduct(plane->normal, p) - plane->dist;
 }
 
 float Collision_PlayerHeight(bool crouched)
@@ -71,13 +70,13 @@ bool Collision_CheckNextLevel(const BSP_Map *map, Vector3 feet, bool crouched, c
     const float halfWidth = COLLISION_PLAYER_HALF_WIDTH;
     const float halfHeight = Collision_PlayerHeight(crouched) * 0.5f;
 
-    if (origin.x + halfWidth < next.mins[0] || origin.x - halfWidth > next.maxs[0])
+    if (origin.x + halfWidth < next.mins.x || origin.x - halfWidth > next.maxs.x)
         return false;
 
-    if (origin.y + halfWidth < next.mins[1] || origin.y - halfWidth > next.maxs[1])
+    if (origin.y + halfWidth < next.mins.y || origin.y - halfWidth > next.maxs.y)
         return false;
 
-    if (origin.z + halfHeight < next.mins[2] || origin.z - halfHeight > next.maxs[2])
+    if (origin.z + halfHeight < next.mins.z || origin.z - halfHeight > next.maxs.z)
         return false;
 
     snprintf(mapName, (size_t)mapNameSize, "%s", next.map);

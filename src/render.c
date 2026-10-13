@@ -116,7 +116,7 @@ static bool GrowBatch(BSP_Batch *batch)
     return true;
 }
 
-static void AppendVertex(BSP_Batch *batch, const FaceContext *context, const BSP_Vertex *vertex)
+static void AppendVertex(BSP_Batch *batch, const FaceContext *context, const Vector3 *vertex)
 {
     BSP_RenderVertex *out;
     float s;
@@ -140,7 +140,7 @@ static void AppendVertex(BSP_Batch *batch, const FaceContext *context, const BSP
     out->lm_t = lm_t;
 }
 
-static void AppendTriangle(BSP_Batch *batch, const FaceContext *context, const BSP_Vertex *a, const BSP_Vertex *b, const BSP_Vertex *c)
+static void AppendTriangle(BSP_Batch *batch, const FaceContext *context, const Vector3 *a, const Vector3 *b, const Vector3 *c)
 {
     AppendVertex(batch, context, a);
     AppendVertex(batch, context, b);
@@ -185,7 +185,7 @@ static void AddFace(BSP_Renderer *renderer, const BSP_Map *map, int index)
     const BSP_Face *face = &map->faces[index];
     FaceContext context;
     BSP_Batch *batch;
-    BSP_Vertex *vertices;
+    Vector3 *vertices;
     int miptex;
     int count;
     int i;
@@ -196,7 +196,7 @@ static void AddFace(BSP_Renderer *renderer, const BSP_Map *map, int index)
     context = MakeFaceContext(renderer, map, index, &miptex);
     batch = &renderer->batches[miptex];
 
-    vertices = malloc(sizeof(BSP_Vertex) * face->numedges);
+    vertices = malloc(sizeof(Vector3) * face->numedges);
 
     if (!vertices)
         return;

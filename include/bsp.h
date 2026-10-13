@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "raylib.h"
+
 #define BSP_VERSION 30
 #define BSP_LUMP_COUNT 15
 #define BSP_MAX_TEXTURES 4096
@@ -36,16 +38,10 @@ typedef struct {
 } BSP_Lump;
 
 typedef struct {
-    float normal[3];
+    Vector3 normal;
     float dist;
     int32_t type;
 } BSP_Plane;
-
-typedef struct {
-    float x;
-    float y;
-    float z;
-} BSP_Vertex;
 
 typedef struct {
     uint16_t v[2];
@@ -92,9 +88,9 @@ typedef struct {
 } BSP_Leaf;
 
 typedef struct {
-    float mins[3];
-    float maxs[3];
-    float origin[3];
+    Vector3 mins;
+    Vector3 maxs;
+    Vector3 origin;
     int32_t headnode[4];
     int32_t visleafs;
     int32_t firstface;
@@ -121,7 +117,7 @@ typedef struct {
     BSP_Plane *planes;
     int num_planes;
 
-    BSP_Vertex *vertices;
+    Vector3 *vertices;
     int num_vertices;
 
     BSP_Edge *edges;
@@ -160,15 +156,15 @@ void BSP_Free(BSP_Map *map);
 
 BSP_Texture *BSP_GetTexture(BSP_Map *map, int index);
 
-int BSP_GetFaceVertices(const BSP_Map *map, const BSP_Face *face, BSP_Vertex *out);
+int BSP_GetFaceVertices(const BSP_Map *map, const BSP_Face *face, Vector3 *out);
 
-void BSP_GetTexCoord(const BSP_TexInfo *texinfo, const BSP_Vertex *vertex, float *s, float *t);
+void BSP_GetTexCoord(const BSP_TexInfo *texinfo, const Vector3 *vertex, float *s, float *t);
 
 typedef struct BSP_NextLevel
 {
     char map[BSP_MAP_NAME_SIZE];
-    float mins[3];
-    float maxs[3];
+    Vector3 mins;
+    Vector3 maxs;
 } BSP_NextLevel;
 
 bool BSP_GetPlayerStart(const BSP_Map *map, float *x, float *y, float *z);
