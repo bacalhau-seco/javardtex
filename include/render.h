@@ -36,14 +36,7 @@ typedef struct {
     int capacity;
     Shader shader;
     int mvp_loc;
-    int camera_loc;
-    int time_loc;
     int sky_color_loc;
-    int scale_loc;
-    int height_loc;
-    int speed_loc;
-    int pixels_loc;
-    int opacity_loc;
     float color[3];
 } BSP_Sky;
 

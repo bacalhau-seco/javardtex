@@ -93,8 +93,4 @@ void Cvar_Init(void)
     Cvar_Register("movestep", 1.0f);
     Cvar_Register("groundcheck", 2.0f);
     Cvar_Register("stepheight", 16.0f);
-
-    Cvar_Register("cloudsize", 512.0f);
-    Cvar_Register("cloudheight", 512.0f);
-    Cvar_Register("cloudspeed", 512.0f);
 }

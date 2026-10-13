@@ -46,101 +46,18 @@ static const char *SkyVertexShader =
     "#version 330\n"
     "layout(location = 0) in vec3 vertexPosition;\n"
     "uniform mat4 mvp;\n"
-    "out vec3 worldPosition;\n"
     "void main()\n"
     "{\n"
-    "    worldPosition = vertexPosition;\n"
     "    gl_Position = mvp * vec4(vertexPosition, 1.0);\n"
     "}\n";
 
 static const char *SkyFragmentShader =
     "#version 330\n"
-    "in vec3 worldPosition;\n"
-    "uniform vec3 cameraPosition;\n"
     "uniform vec3 skyColor;\n"
-    "uniform float time;\n"
-    "uniform float cloudScale;\n"
-    "uniform float cloudHeight;\n"
-    "uniform float cloudSpeed;\n"
-    "uniform float cloudPixels;\n"
-    "uniform float cloudOpacity;\n"
     "out vec4 finalColor;\n"
-    "vec2 Hash2(vec2 cell)\n"
-    "{\n"
-    "    vec3 p = fract(vec3(cell.xyx) * vec3(0.1031, 0.1030, 0.0973));\n"
-    "    p += dot(p, p.yzx + 33.33);\n"
-    "    return fract((p.xx + p.yz) * p.zy) * 2.0 - 1.0;\n"
-    "}\n"
-    "float Simplex(vec2 point)\n"
-    "{\n"
-    "    const float F2 = 0.3660254;\n"
-    "    const float G2 = 0.2113249;\n"
-    "    vec2 cell = floor(point + (point.x + point.y) * F2);\n"
-    "    vec2 a = point - cell + (cell.x + cell.y) * G2;\n"
-    "    vec2 step1 = a.x > a.y ? vec2(1.0, 0.0) : vec2(0.0, 1.0);\n"
-    "    vec2 b = a - step1 + G2;\n"
-    "    vec2 c = a - 1.0 + 2.0 * G2;\n"
-    "    vec3 weight = max(0.5 - vec3(dot(a, a), dot(b, b), dot(c, c)), 0.0);\n"
-    "    weight = weight * weight * weight * weight;\n"
-    "    vec3 gradient = vec3(dot(Hash2(cell), a), dot(Hash2(cell + step1), b), dot(Hash2(cell + 1.0), c));\n"
-    "    return dot(weight, gradient) * 35.0 + 0.5;\n"
-    "}\n"
-    "float Fbm(vec2 point, int octaves)\n"
-    "{\n"
-    "    float value = 0.0;\n"
-    "    float amplitude = 0.5;\n"
-    "    float frequency = 1.0;\n"
-    "    int i;\n"
-    "    for (i = 0; i < octaves; i++)\n"
-    "    {\n"
-    "        value += Simplex(point * frequency) * amplitude;\n"
-    "        frequency *= 2.0;\n"
-    "        amplitude *= 0.5;\n"
-    "    }\n"
-    "    return value;\n"
-    "}\n"
-    "float Clouds(vec2 point)\n"
-    "{\n"
-    "    vec2 warp = vec2(Fbm(point + vec2(1.7, 9.2), 2), Fbm(point + vec2(8.3, 2.8), 2));\n"
-    "    return Fbm(point + warp * 1.2, 4);\n"
-    "}\n"
-    "vec4 Layer(vec3 direction, float height, float scale, float speed, float seed, float threshold)\n"
-    "{\n"
-    "    float up = max(abs(direction.y), 0.03);\n"
-    "    vec2 plane = cameraPosition.xz + direction.xz * (height / up);\n"
-    "    vec2 point = plane * scale + vec2(seed, time * speed * scale);\n"
-    "    float pixels = cloudPixels / (cloudScale / scale);\n"
-    "    point = floor(point * pixels) / pixels;\n"
-    "    float density = Clouds(point);\n"
-    "    float mass = clamp((density - threshold) / (1.0 - threshold), 0.0, 1.0);\n"
-    "    if (mass <= 0.0)\n"
-    "        return vec4(0.0);\n"
-    "    float alpha = ceil(mass * 5.0) / 5.0;\n"
-    "    float shade = 0.55 + floor(mass * 4.0) / 4.0 * 0.45;\n"
-    "    return vec4(vec3(shade), alpha);\n"
-    "}\n"
     "void main()\n"
     "{\n"
-    "    vec3 direction = normalize(worldPosition - cameraPosition);\n"
-    "    vec3 color = skyColor;\n"
-    "    float fade = smoothstep(0.02, 0.10, abs(direction.y));\n"
-    "    fade = ceil(fade * 4.0) / 4.0;\n"
-    "    if (fade <= 0.0)\n"
-    "    {\n"
-    "        finalColor = vec4(color, 1.0);\n"
-    "        return;\n"
-    "    }\n"
-    "    vec4 low = Layer(direction, cloudHeight, cloudScale, cloudSpeed, 3.0, 0.48);\n"
-    "    float cover = low.a * cloudOpacity * fade;\n"
-    "    if (cover < 0.99)\n"
-    "    {\n"
-    "        vec4 high = Layer(direction, cloudHeight * 2.2, cloudScale * 0.45, cloudSpeed * 0.55, 31.0, 0.58);\n"
-    "        vec4 mid = Layer(direction, cloudHeight * 1.4, cloudScale * 0.75, cloudSpeed * 0.8, 17.0, 0.52);\n"
-    "        color = mix(color, high.rgb * 0.85, high.a * cloudOpacity * 0.6 * fade);\n"
-    "        color = mix(color, mid.rgb * 0.92, mid.a * cloudOpacity * 0.8 * fade);\n"
-    "    }\n"
-    "    color = mix(color, low.rgb, cover);\n"
-    "    finalColor = vec4(color, 1.0);\n"
+    "    finalColor = vec4(skyColor, 1.0);\n"
     "}\n";
 
 typedef struct {
@@ -403,14 +320,7 @@ static bool LoadSkyShader(BSP_Sky *sky)
         return false;
 
     sky->mvp_loc = GetShaderLocation(sky->shader, "mvp");
-    sky->camera_loc = GetShaderLocation(sky->shader, "cameraPosition");
-    sky->time_loc = GetShaderLocation(sky->shader, "time");
     sky->sky_color_loc = GetShaderLocation(sky->shader, "skyColor");
-    sky->scale_loc = GetShaderLocation(sky->shader, "cloudScale");
-    sky->height_loc = GetShaderLocation(sky->shader, "cloudHeight");
-    sky->speed_loc = GetShaderLocation(sky->shader, "cloudSpeed");
-    sky->pixels_loc = GetShaderLocation(sky->shader, "cloudPixels");
-    sky->opacity_loc = GetShaderLocation(sky->shader, "cloudOpacity");
 
     return true;
 }
@@ -686,25 +596,12 @@ void BSP_Render(const BSP_Renderer *renderer)
 void BSP_RenderSky(const BSP_Renderer *renderer, Vector3 cameraPosition, float time)
 {
     Matrix mvp;
-    float camera[3];
-    float scale;
-    float height;
-    float speed;
-    float pixels;
-    float opacity;
+
+    (void)cameraPosition;
+    (void)time;
 
     if (!renderer || renderer->sky.vao == 0 || renderer->sky.shader.id == 0)
         return;
-
-    scale = 1.0f / Cvar_Value("cloudsize", 2048.0f);
-    height = Cvar_Value("cloudheight", 1024.0f);
-    speed = Cvar_Value("cloudspeed", 120.0f);
-    pixels = Cvar_Value("cloudpixels", 128.0f);
-    opacity = Cvar_Value("cloudopacity", 0.8f);
-
-    camera[0] = cameraPosition.x;
-    camera[1] = cameraPosition.y;
-    camera[2] = cameraPosition.z;
 
     rlDrawRenderBatchActive();
     rlDisableBackfaceCulling();
@@ -713,14 +610,7 @@ void BSP_RenderSky(const BSP_Renderer *renderer, Vector3 cameraPosition, float t
 
     mvp = MatrixMultiply(rlGetMatrixModelview(), rlGetMatrixProjection());
     SetShaderValueMatrix(renderer->sky.shader, renderer->sky.mvp_loc, mvp);
-    SetShaderValue(renderer->sky.shader, renderer->sky.camera_loc, camera, SHADER_UNIFORM_VEC3);
     SetShaderValue(renderer->sky.shader, renderer->sky.sky_color_loc, renderer->sky.color, SHADER_UNIFORM_VEC3);
-    SetShaderValue(renderer->sky.shader, renderer->sky.time_loc, &time, SHADER_UNIFORM_FLOAT);
-    SetShaderValue(renderer->sky.shader, renderer->sky.scale_loc, &scale, SHADER_UNIFORM_FLOAT);
-    SetShaderValue(renderer->sky.shader, renderer->sky.height_loc, &height, SHADER_UNIFORM_FLOAT);
-    SetShaderValue(renderer->sky.shader, renderer->sky.speed_loc, &speed, SHADER_UNIFORM_FLOAT);
-    SetShaderValue(renderer->sky.shader, renderer->sky.pixels_loc, &pixels, SHADER_UNIFORM_FLOAT);
-    SetShaderValue(renderer->sky.shader, renderer->sky.opacity_loc, &opacity, SHADER_UNIFORM_FLOAT);
 
     rlEnableVertexArray(renderer->sky.vao);
     rlDrawVertexArray(0, renderer->sky.count);
