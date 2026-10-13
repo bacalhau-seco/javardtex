@@ -1,0 +1,105 @@
+---- qbsp / ericw-tools 2.0.0-alpha11 ----
+
+--- Options Summary ---
+    "nopercent" was set to "1" (from command line)
+    "hlbsp" was set to "1" (from command line)
+    "wadpath" was set to "/home/bacalhau/Dev/game/javardtex/game/maps/.." (from command line)
+
+Input file: /home/bacalhau/Dev/game/javardtex/game/maps/test.map
+Output file: /home/bacalhau/Dev/game/javardtex/game/maps/test.bsp
+
+INFO: using built-in palette.
+WARNING: /home/bacalhau/Dev/game/javardtex/game/maps/test.map[line 68]: repairing invalid texture projection ("w_rock1" near 336 -120 104)
+WARNING: /home/bacalhau/Dev/game/javardtex/game/maps/test.map[line 71]: repairing invalid texture projection ("w_brick" near 344 136 120)
+WARNING: /home/bacalhau/Dev/game/javardtex/game/maps/test.map[line 79]: repairing invalid texture projection ("w_brick" near 696 -120 112)
+WARNING: /home/bacalhau/Dev/game/javardtex/game/maps/test.map[line 85]: repairing invalid texture projection ("w_brick" near 336 136 104)
+      7 entities
+      4 unique textures
+     61 texinfos
+    188 unique planes
+
+INFO: world extents calculated to 1576 units
+     30 brushes
+    216 sides
+
+            0 texture frames added
+WARNING: unable to find texture skip
+Processing hull 0...
+    30 SOLID brushes
+    30 brushes total
+    216 visible sides
+INFO: calculating BSP for 30 brushes with 216 sides
+     30 brushes
+    216 visible faces
+    150 nodes
+    150 expensive split nodes
+    151 leaves
+     39 SOLID leafs
+    112 EMPTY leafs
+    151 leafs total
+    24 max tree height
+    12 avg tree height
+    725 tree portals
+    27 outside leaves
+    0 detail filled leafs
+     30 brushes
+    120 visible faces
+     96 non-visible faces
+    154 nodes
+     37 non-visible nodes
+    154 expensive split nodes
+    155 leaves
+     44 SOLID leafs
+    111 EMPTY leafs
+    155 leafs total
+    25 max tree height
+    12 avg tree height
+    767 tree portals
+    32 outside leaves
+    0 detail filled leafs
+    767 tree portals
+    668 sides visible
+    334 makefaces
+     59 merged
+     89 subdivided
+    40 nodes pruned
+     79 player-occupiable leaves
+     79 clusters of leaves
+    158 vis portals
+     79 EMPTY leafs
+     36 SOLID leafs
+    115 leafs total
+    25 max tree height
+    14 avg tree height
+    364 edges added by tjunctions
+    338 faces optimized through MWT
+    994 triangles computed from MWT
+     74 faces created via optimization of MWT triangles
+    948 edges
+    438 faces
+Processing hull 1...
+Processing hull 2...
+Processing hull 3...
+Writing /home/bacalhau/Dev/game/javardtex/game/maps/test.bsp as Half-Life BSP hl
+Wrote /home/bacalhau/Dev/game/javardtex/game/maps/test.bsp
+
+count   lump name    byte size 
+      1 models               64
+    198 planes             3960
+    500 vertexes           6000
+    114 nodes              2736
+     37 texinfos           1480
+    438 faces              8760
+    390 clipnodes          3120
+     80 leafs              2240
+    594 marksurfaces       1188
+    949 edges              3796
+   1896 surfedges          7584
+      4 textures          67734
+        lightdata             0
+        visdata               0
+        entdata             620
+
+0.068s seconds elapsed
+
+

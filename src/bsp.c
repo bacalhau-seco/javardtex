@@ -343,7 +343,7 @@ static bool ReadQuoted(const char **cursor, const char *end, char *out, size_t s
     return true;
 }
 
-static bool ParsePlayerStartBlock(const char *start, const char *end, float *x, float *y, float *z)
+static bool ParsePlayerStartBlock(const char *start, const char *end, float *x, float *y, float *z, float *angle)
 {
     const char *cursor = start;
     char key[64];
@@ -353,6 +353,9 @@ static bool ParsePlayerStartBlock(const char *start, const char *end, float *x, 
     float ox = 0.0f;
     float oy = 0.0f;
     float oz = 0.0f;
+    float yaw = 0.0f;
+    float pitch = 0.0f;
+    float roll = 0.0f;
 
     while (ReadQuoted(&cursor, end, key, sizeof(key)) &&
            ReadQuoted(&cursor, end, value, sizeof(value)))
@@ -362,6 +365,12 @@ static bool ParsePlayerStartBlock(const char *start, const char *end, float *x, 
 
         if (strcmp(key, "origin") == 0 && sscanf(value, "%f %f %f", &ox, &oy, &oz) == 3)
             has_origin = true;
+
+        if (strcmp(key, "angle") == 0)
+            sscanf(value, "%f", &yaw);
+
+        if (strcmp(key, "angles") == 0)
+            sscanf(value, "%f %f %f", &pitch, &yaw, &roll);
     }
 
     if (!is_start || !has_origin)
@@ -370,15 +379,16 @@ static bool ParsePlayerStartBlock(const char *start, const char *end, float *x, 
     *x = ox;
     *y = oy;
     *z = oz;
+    *angle = yaw;
 
     return true;
 }
 
-bool BSP_GetPlayerStart(const BSP_Map *map, float *x, float *y, float *z)
+static bool FindPlayerStart(const BSP_Map *map, float *x, float *y, float *z, float *angle)
 {
     const char *cursor;
 
-    if (!map || !map->entities || !x || !y || !z)
+    if (!map || !map->entities || !x || !y || !z || !angle)
         return false;
 
     cursor = map->entities;
@@ -390,11 +400,33 @@ bool BSP_GetPlayerStart(const BSP_Map *map, float *x, float *y, float *z)
         if (!end)
             break;
 
-        if (ParsePlayerStartBlock(cursor + 1, end, x, y, z))
+        if (ParsePlayerStartBlock(cursor + 1, end, x, y, z, angle))
             return true;
 
         cursor = end + 1;
     }
 
     return false;
+}
+
+bool BSP_GetPlayerStart(const BSP_Map *map, float *x, float *y, float *z)
+{
+    float angle = 0.0f;
+
+    if (!x || !y || !z)
+        return false;
+
+    return FindPlayerStart(map, x, y, z, &angle);
+}
+
+bool BSP_GetPlayerStartAngle(const BSP_Map *map, float *angle)
+{
+    float x = 0.0f;
+    float y = 0.0f;
+    float z = 0.0f;
+
+    if (!angle)
+        return false;
+
+    return FindPlayerStart(map, &x, &y, &z, angle);
 }

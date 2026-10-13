@@ -6,6 +6,7 @@
 typedef struct Args
 {
     char mapPath[ARGS_MAP_PATH_MAX];
+    bool hasMap;
 } Args;
 
 void Args_Init(Args *args);

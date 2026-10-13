@@ -9,12 +9,65 @@ static Body player = { 0 };
 static BSP_Map bsp = { 0 };
 static BSP_Renderer bspRenderer = { 0 };
 static Vector2 lookRotation = { 0 };
+static Camera camera = { 0 };
+static Args args;
+static bool mapLoaded = false;
+static bool ignoreMouseDelta = false;
 GameState gameState = GAME_STATE_TITLE;
 static GameState oldGameState = GAME_STATE_TITLE;
 
+static void UnloadMap(void)
+{
+    if (!mapLoaded)
+        return;
+
+    BSP_RendererShutdown(&bspRenderer);
+    BSP_Free(&bsp);
+
+    mapLoaded = false;
+}
+
+static bool LoadMap(const char *path)
+{
+    if (path == 0 || path[0] == '\0')
+        return false;
+
+    UnloadMap();
+
+    if (!BSP_Load(&bsp, path))
+        return false;
+
+    if (!BSP_RendererInit(&bspRenderer, &bsp))
+    {
+        BSP_Free(&bsp);
+        return false;
+    }
+
+    mapLoaded = true;
+
+    Body fresh = { 0 };
+    player = fresh;
+    lookRotation.x = 0;
+    lookRotation.y = 0;
+    ignoreMouseDelta = true;
+
+    Vector3 spawn;
+
+    if (Collision_GetSpawn(&bsp, &spawn))
+        player.position = spawn;
+
+    float spawnYaw;
+
+    if (Collision_GetSpawnYaw(&bsp, &spawnYaw))
+        lookRotation.x = spawnYaw;
+
+    InitCamera(&camera, &player);
+
+    return true;
+}
+
 int main(int argc, char **argv)
 {
-    Args args;
 
     if (!Args_Parse(&args, argc, argv))
         return 1;
@@ -28,28 +81,21 @@ int main(int argc, char **argv)
     InitWindow(screenWidth, screenHeight, "javardtex");
     SetTargetFPS((int)Cvar_Get("maxfps")->value);
 
-    if (!BSP_Load(&bsp, args.mapPath))
+    Fonts_Load();
+
+    if (args.hasMap)
     {
-        CloseWindow();
-        return 1;
+        if (!LoadMap(args.mapPath))
+        {
+            Fonts_Unload();
+            CloseWindow();
+            return 1;
+        }
+
+        gameState = GAME_STATE_GAME;
     }
 
-    if (!BSP_RendererInit(&bspRenderer, &bsp))
-    {
-        BSP_Free(&bsp);
-        CloseWindow();
-        return 1;
-    }
-
-    Vector3 spawn;
-
-    if (Collision_GetSpawn(&bsp, &spawn))
-        player.position = spawn;
-
-    Camera camera;
-    InitCamera(&camera, &player);
-
-    while (!WindowShouldClose())
+    while (!WindowShouldClose() && !quitRequested)
     {
         if (gameState != oldGameState)
         {
@@ -63,6 +109,7 @@ int main(int argc, char **argv)
 
             case GAME_STATE_GAME:
                 DisableCursor();
+                ignoreMouseDelta = true;
                 break;
             }
 
@@ -75,6 +122,13 @@ int main(int argc, char **argv)
         switch (gameState)
         {
         case GAME_STATE_TITLE:
+            if (newGameRequested)
+            {
+                newGameRequested = false;
+
+                if (LoadMap(args.mapPath))
+                    gameState = GAME_STATE_GAME;
+            }
             break;
 
         case GAME_STATE_PAUSE:
@@ -84,6 +138,13 @@ int main(int argc, char **argv)
             break;
 
         case GAME_STATE_GAME:
+            if (ignoreMouseDelta)
+            {
+                in.mouse.x = 0;
+                in.mouse.y = 0;
+                ignoreMouseDelta = false;
+            }
+
             lookRotation.x -= in.mouse.x * Cvar_Get("mouseh")->value;
             lookRotation.y += in.mouse.y * Cvar_Get("mousev")->value;
             lookRotation.y = Clamp(lookRotation.y, -PI/2+0.001f, PI/2-0.001f);
@@ -119,17 +180,21 @@ int main(int argc, char **argv)
                 break;
 
             case GAME_STATE_GAME:
-                BeginMode3D(camera);
-                    BSP_Render(&bspRenderer);
-                EndMode3D();
+                if (mapLoaded)
+                {
+                    BeginMode3D(camera);
+                        BSP_Render(&bspRenderer);
+                    EndMode3D();
+                }
                 break;
             }
 
         EndDrawing();
     }
 
-    BSP_RendererShutdown(&bspRenderer);
-    BSP_Free(&bsp);
+    Fonts_Unload();
+
+    UnloadMap();
 
     CloseWindow();
 

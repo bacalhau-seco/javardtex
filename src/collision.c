@@ -55,6 +55,18 @@ bool Collision_GetSpawn(const BSP_Map *map, Vector3 *feet)
     return true;
 }
 
+bool Collision_GetSpawnYaw(const BSP_Map *map, float *yaw)
+{
+    float angle;
+
+    if (!yaw || !BSP_GetPlayerStartAngle(map, &angle))
+        return false;
+
+    *yaw = (angle - 90.0f) * DEG2RAD;
+
+    return true;
+}
+
 bool Collision_IsSolid(const BSP_Map *map, Vector3 feet, bool crouched)
 {
     Vector3 origin;

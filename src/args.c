@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define ARGS_DEFAULT_MAP "game/maps/test.bsp"
+#define ARGS_DEFAULT_MAP STARTMAP
 
 static bool Args_StringEndsWith(const char *text, const char *suffix)
 {
@@ -50,6 +50,7 @@ void Args_Init(Args *args)
         return;
 
     snprintf(args->mapPath, sizeof(args->mapPath), "%s", ARGS_DEFAULT_MAP);
+    args->hasMap = false;
 }
 
 void Args_PrintUsage(const char *exeName)
@@ -94,6 +95,8 @@ bool Args_Parse(Args *args, int argc, char **argv)
                 printf("error: invalid map '%s'\n", argv[i + 1]);
                 return false;
             }
+
+            args->hasMap = true;
 
             i++;
             continue;
