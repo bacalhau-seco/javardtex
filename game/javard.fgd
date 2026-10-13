@@ -12,6 +12,12 @@
 
 @SolidClass = func_group : "Brush group (merged into world)" []
 
+@SolidClass color(255 0 255) = func_next_level : "Loads the next map when the player touches it"
+[
+    map(string) : "Next map (name or path)" : "map.bsp"
+]
+
+
 @PointClass size(-16 -16 -36, 16 16 36) color(0 255 0) = info_player_start : "Player start"
 [
     angle(integer) : "Yaw" : 0

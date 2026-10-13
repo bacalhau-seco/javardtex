@@ -4,9 +4,10 @@ BSP is version Half-Life BSP hl
 INFO: using built-in palette.
 load: WARNING: filesystem error: cannot get file size: Is a directory [/home/bacalhau/Dev/game/javardtex/game/maps/]
 ConvertTextures: WARNING: invalid size data for 
+ConvertTextures: WARNING: Texture  duplicated
 Loading extended texinfo flags from /home/bacalhau/Dev/game/javardtex/game/maps/test.texinfo.json...
 Loading extended content flags from /home/bacalhau/Dev/game/javardtex/game/maps/test.content.json...
-7 entities read, 5 are lights.
+9 entities read, 6 are lights.
 
 --- Options Summary ---
     "nopercent" was set to "1" (from command line)
@@ -35,22 +36,22 @@ Loading extended content flags from /home/bacalhau/Dev/game/javardtex/game/maps/
 Embree_TraceInit: Embree version: 4.4.0
 Embree_TraceInit: 
 	0 sky faces
-	438 solid faces
+	469 solid faces
 	0 filtered faces
 	0 shadow-casting skip faces
-SetupLights: 5 initial lights
-SetupLights: 5 after surface lights
-SetupLights: 5 after jittering
-Final count: 5 lights, 0 suns in use.
+SetupLights: 6 initial lights
+SetupLights: 6 after surface lights
+SetupLights: 6 after jittering
+Final count: 6 lights, 0 suns in use.
        48 dirtmap vectors
 0 surface light points in use.
 map uses color: true
-lightmap size (total): 39684
+lightmap size (total): 44328
 Lighting Completed.
 
 0 switchable light styles (32 max)
 Writing /home/bacalhau/Dev/game/javardtex/game/maps/test.bsp as Half-Life BSP hl
-0.218s seconds elapsed
+0.285s seconds elapsed
 0 empty lightmaps
 
 

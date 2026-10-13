@@ -1,6 +1,10 @@
 #include "../include/collision.h"
 #include "../include/cvar.h"
 
+#include <stdio.h>
+
+#define COLLISION_PLAYER_HALF_WIDTH 16.0f
+
 static Vector3 WorldToQuake(Vector3 w)
 {
     return (Vector3){ w.x, -w.z, w.y };
@@ -51,6 +55,32 @@ bool Collision_GetSpawn(const BSP_Map *map, Vector3 *feet)
 
     *feet = QuakeToWorld((Vector3){ x, y, z });
     feet->y -= Collision_PlayerHeight(false) * 0.5f;
+
+    return true;
+}
+
+bool Collision_CheckNextLevel(const BSP_Map *map, Vector3 feet, bool crouched, char *mapName, int mapNameSize)
+{
+    BSP_NextLevel next;
+
+    if (!mapName || mapNameSize <= 0 || !BSP_GetNextLevel(map, &next))
+        return false;
+
+    Vector3 origin = WorldToQuake(Collision_FeetToOrigin(feet, crouched));
+
+    const float halfWidth = COLLISION_PLAYER_HALF_WIDTH;
+    const float halfHeight = Collision_PlayerHeight(crouched) * 0.5f;
+
+    if (origin.x + halfWidth < next.mins[0] || origin.x - halfWidth > next.maxs[0])
+        return false;
+
+    if (origin.y + halfWidth < next.mins[1] || origin.y - halfWidth > next.maxs[1])
+        return false;
+
+    if (origin.z + halfHeight < next.mins[2] || origin.z - halfHeight > next.maxs[2])
+        return false;
+
+    snprintf(mapName, (size_t)mapNameSize, "%s", next.map);
 
     return true;
 }

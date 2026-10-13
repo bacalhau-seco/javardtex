@@ -13,6 +13,7 @@ static Camera camera = { 0 };
 static Args args;
 static bool mapLoaded = false;
 static bool ignoreMouseDelta = false;
+static bool insideNextLevel = false;
 GameState gameState = GAME_STATE_TITLE;
 static GameState oldGameState = GAME_STATE_TITLE;
 
@@ -29,21 +30,27 @@ static void UnloadMap(void)
 
 static bool LoadMap(const char *path)
 {
+    BSP_Map loaded = { 0 };
+    BSP_Renderer loadedRenderer = { 0 };
+
     if (path == 0 || path[0] == '\0')
         return false;
 
-    UnloadMap();
-
-    if (!BSP_Load(&bsp, path))
+    if (!BSP_Load(&loaded, path))
         return false;
 
-    if (!BSP_RendererInit(&bspRenderer, &bsp))
+    if (!BSP_RendererInit(&loadedRenderer, &loaded))
     {
-        BSP_Free(&bsp);
+        BSP_Free(&loaded);
         return false;
     }
 
+    UnloadMap();
+
+    bsp = loaded;
+    bspRenderer = loadedRenderer;
     mapLoaded = true;
+    insideNextLevel = true;
 
     Body fresh = { 0 };
     player = fresh;
@@ -161,6 +168,22 @@ int main(int argc, char **argv)
             );
 
             Camera_Update(&camera, &player, lookRotation);
+
+            char nextMap[BSP_MAP_NAME_SIZE];
+
+            if (!Collision_CheckNextLevel(&bsp, player.position, player.isCrouched, nextMap, (int)sizeof(nextMap)))
+            {
+                insideNextLevel = false;
+            }
+            else if (!insideNextLevel)
+            {
+                char nextPath[ARGS_MAP_PATH_MAX];
+
+                insideNextLevel = true;
+
+                if (Args_ResolveMapPath(nextPath, (int)sizeof(nextPath), nextMap))
+                    LoadMap(nextPath);
+            }
             break;
         }
 

@@ -20,22 +20,34 @@ static bool Args_StringEndsWith(const char *text, const char *suffix)
     return strcmp(text + (textLength - suffixLength), suffix) == 0;
 }
 
-static bool Args_SetMapPath(Args *args, const char *value)
+bool Args_ResolveMapPath(char *dest, int size, const char *value)
 {
-    if (args == NULL || value == NULL || value[0] == '\0')
+    if (dest == NULL || size <= 0 || value == NULL || value[0] == '\0')
         return false;
 
     bool hasDirectory = (strchr(value, '/') != NULL);
     bool hasExtension = Args_StringEndsWith(value, ".bsp");
 
-    int written;
+    const char *prefix = hasDirectory ? "" : "game/maps/";
+    const char *suffix = hasExtension ? "" : ".bsp";
 
-    if (hasDirectory || hasExtension)
-        written = snprintf(args->mapPath, sizeof(args->mapPath), "%s", value);
-    else
-        written = snprintf(args->mapPath, sizeof(args->mapPath), "game/maps/%s.bsp", value);
+    int written = snprintf(dest, (size_t)size, "%s%s%s", prefix, value, suffix);
 
-    if (written < 0 || (size_t)written >= sizeof(args->mapPath))
+    if (written < 0 || written >= size)
+    {
+        dest[0] = '\0';
+        return false;
+    }
+
+    return true;
+}
+
+static bool Args_SetMapPath(Args *args, const char *value)
+{
+    if (args == NULL)
+        return false;
+
+    if (!Args_ResolveMapPath(args->mapPath, (int)sizeof(args->mapPath), value))
     {
         Args_Init(args);
         return false;

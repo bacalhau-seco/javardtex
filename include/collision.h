@@ -8,6 +8,7 @@
 
 bool Collision_GetSpawn(const BSP_Map *map, Vector3 *feet);
 bool Collision_GetSpawnYaw(const BSP_Map *map, float *yaw);
+bool Collision_CheckNextLevel(const BSP_Map *map, Vector3 feet, bool crouched, char *mapName, int mapNameSize);
 bool Collision_IsSolid(const BSP_Map *map, Vector3 feet, bool crouched);
 float Collision_PlayerHeight(bool crouched);
 float Collision_EyeHeight(bool crouched);

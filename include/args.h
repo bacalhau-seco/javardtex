@@ -9,6 +9,7 @@ typedef struct Args
     bool hasMap;
 } Args;
 
+bool Args_ResolveMapPath(char *dest, int size, const char *value);
 void Args_Init(Args *args);
 bool Args_Parse(Args *args, int argc, char **argv);
 void Args_PrintUsage(const char *exeName);

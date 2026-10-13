@@ -8,6 +8,7 @@
 #define BSP_LUMP_COUNT 15
 #define BSP_MAX_TEXTURES 4096
 #define BSP_TEXTURE_NAME_SIZE 16
+#define BSP_MAP_NAME_SIZE 64
 #define BSP_CONTENTS_EMPTY -1
 #define BSP_CONTENTS_SOLID -2
 #define BSP_HULL_PLAYER 1
@@ -163,7 +164,15 @@ int BSP_GetFaceVertices(const BSP_Map *map, const BSP_Face *face, BSP_Vertex *ou
 
 void BSP_GetTexCoord(const BSP_TexInfo *texinfo, const BSP_Vertex *vertex, float *s, float *t);
 
+typedef struct BSP_NextLevel
+{
+    char map[BSP_MAP_NAME_SIZE];
+    float mins[3];
+    float maxs[3];
+} BSP_NextLevel;
+
 bool BSP_GetPlayerStart(const BSP_Map *map, float *x, float *y, float *z);
 bool BSP_GetPlayerStartAngle(const BSP_Map *map, float *angle);
+bool BSP_GetNextLevel(const BSP_Map *map, BSP_NextLevel *out);
 
 #endif

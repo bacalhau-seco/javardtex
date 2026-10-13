@@ -384,23 +384,111 @@ static bool ParsePlayerStartBlock(const char *start, const char *end, float *x, 
     return true;
 }
 
+static bool NextEntityBlock(const char **cursor, const char **blockEnd)
+{
+    const char *open;
+    const char *close;
+
+    if (!cursor || !*cursor || !blockEnd)
+        return false;
+
+    open = strchr(*cursor, '{');
+
+    if (!open)
+        return false;
+
+    close = strchr(open, '}');
+
+    if (!close)
+        return false;
+
+    *cursor = open + 1;
+    *blockEnd = close;
+
+    return true;
+}
+
+static bool ParseNextLevelBlock(const BSP_Map *map, const char *start, const char *end, BSP_NextLevel *out)
+{
+    const char *cursor = start;
+    char key[64];
+    char value[64];
+    bool is_next_level = false;
+    bool has_map = false;
+    int model_index = -1;
+    float offset[3] = { 0.0f, 0.0f, 0.0f };
+    BSP_NextLevel found = { 0 };
+
+    while (ReadQuoted(&cursor, end, key, sizeof(key)) &&
+           ReadQuoted(&cursor, end, value, sizeof(value)))
+    {
+        if (strcmp(key, "classname") == 0 && strcmp(value, "func_next_level") == 0)
+            is_next_level = true;
+
+        if (strcmp(key, "model") == 0 && value[0] == '*')
+            sscanf(value + 1, "%d", &model_index);
+
+        if (strcmp(key, "origin") == 0)
+            sscanf(value, "%f %f %f", &offset[0], &offset[1], &offset[2]);
+
+        if (strcmp(key, "map") == 0 && value[0] != '\0')
+        {
+            snprintf(found.map, sizeof(found.map), "%s", value);
+            has_map = true;
+        }
+    }
+
+    if (!is_next_level || !has_map)
+        return false;
+
+    if (!map->models || model_index < 0 || model_index >= map->num_models)
+        return false;
+
+    for (int i = 0; i < 3; i++)
+    {
+        found.mins[i] = map->models[model_index].mins[i] + offset[i];
+        found.maxs[i] = map->models[model_index].maxs[i] + offset[i];
+    }
+
+    *out = found;
+
+    return true;
+}
+
+bool BSP_GetNextLevel(const BSP_Map *map, BSP_NextLevel *out)
+{
+    const char *cursor;
+    const char *end;
+
+    if (!map || !map->entities || !out)
+        return false;
+
+    cursor = map->entities;
+
+    while (NextEntityBlock(&cursor, &end))
+    {
+        if (ParseNextLevelBlock(map, cursor, end, out))
+            return true;
+
+        cursor = end + 1;
+    }
+
+    return false;
+}
+
 static bool FindPlayerStart(const BSP_Map *map, float *x, float *y, float *z, float *angle)
 {
     const char *cursor;
+    const char *end;
 
     if (!map || !map->entities || !x || !y || !z || !angle)
         return false;
 
     cursor = map->entities;
 
-    while ((cursor = strchr(cursor, '{')) != NULL)
+    while (NextEntityBlock(&cursor, &end))
     {
-        const char *end = strchr(cursor, '}');
-
-        if (!end)
-            break;
-
-        if (ParsePlayerStartBlock(cursor + 1, end, x, y, z, angle))
+        if (ParsePlayerStartBlock(cursor, end, x, y, z, angle))
             return true;
 
         cursor = end + 1;
