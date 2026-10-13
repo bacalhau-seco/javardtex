@@ -1,3 +1,9 @@
+*.bsp
+*.prt
+*.log
+*.json
+*.map
+
 build/
 
 lib/libraylib.a

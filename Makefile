@@ -9,6 +9,11 @@ LIB = -Llib -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
 
 RAYLIB_DIR = external/raylib/src
 
+# Options forwarded as-is to raylib's own Makefile, e.g.
+#   make RAYLIB_FLAGS="RAYLIB_BUILD_MODE=DEBUG GRAPHICS=GRAPHICS_API_OPENGL_21"
+# Changing them needs a rebuild of raylib: make raylib-clean raylib
+RAYLIB_FLAGS ?=
+
 HEADERS = \
 	$(RAYLIB_DIR)/raylib.h \
 	$(RAYLIB_DIR)/raymath.h \
@@ -16,7 +21,7 @@ HEADERS = \
 	$(RAYLIB_DIR)/rcamera.h \
 	$(RAYLIB_DIR)/rgestures.h
 
-.PHONY: all run clean force raylib
+.PHONY: all run clean force raylib raylib-clean
 
 all: raylib
 	cp -r game/ build/
@@ -27,13 +32,15 @@ run: raylib
 	./$(TARGET)
 
 raylib:
-	$(MAKE) -C $(RAYLIB_DIR)
+	$(MAKE) -C $(RAYLIB_DIR) $(RAYLIB_FLAGS)
 	mkdir -p include lib
 	cp $(HEADERS) include/
 	cp $(RAYLIB_DIR)/libraylib.a lib/
 
-clean:
-	$(MAKE) -C $(RAYLIB_DIR) clean
+raylib-clean:
+	$(MAKE) -C $(RAYLIB_DIR) $(RAYLIB_FLAGS) clean
+
+clean: raylib-clean
 	rm -f $(TARGET)
 	rm -f lib/libraylib.a
 	rm -f $(patsubst $(RAYLIB_DIR)/%,include/%,$(HEADERS))
