@@ -14,6 +14,7 @@ static Args args;
 static bool mapLoaded = false;
 static bool ignoreMouseDelta = false;
 static bool insideNextLevel = false;
+static Color skyColor = { 0, 0, 0, 255 };
 GameState gameState = GAME_STATE_TITLE;
 static GameState oldGameState = GAME_STATE_TITLE;
 
@@ -67,6 +68,17 @@ static bool LoadMap(const char *path)
 
     if (Collision_GetSpawnYaw(&bsp, &spawnYaw))
         lookRotation.x = spawnYaw;
+
+    unsigned char sr;
+    unsigned char sg;
+    unsigned char sb;
+
+    if (BSP_GetSunlightColor(&bsp, &sr, &sg, &sb))
+    {
+        skyColor.r = sr;
+        skyColor.g = sg;
+        skyColor.b = sb;
+    }
 
     InitCamera(&camera, &player);
 
@@ -188,7 +200,7 @@ int main(int argc, char **argv)
         }
 
         BeginDrawing();
-            ClearBackground(RAYWHITE);
+            ClearBackground((gameState == GAME_STATE_GAME && mapLoaded) ? skyColor : RAYWHITE);
 
             switch (gameState)
             {
@@ -206,6 +218,7 @@ int main(int argc, char **argv)
                 if (mapLoaded)
                 {
                     BeginMode3D(camera);
+                        BSP_RenderSky(&bspRenderer, camera.position, (float)GetTime());
                         BSP_Render(&bspRenderer);
                     EndMode3D();
                 }

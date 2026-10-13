@@ -496,6 +496,69 @@ static bool FindPlayerStart(const BSP_Map *map, float *x, float *y, float *z, fl
     return false;
 }
 
+static int ClampColorComponent(int value)
+{
+    if (value < 0)
+        return 0;
+
+    if (value > 255)
+        return 255;
+
+    return value;
+}
+
+static bool ParseSunlightColorBlock(const char *start, const char *end, unsigned char *r, unsigned char *g, unsigned char *b)
+{
+    const char *cursor = start;
+    char key[64];
+    char value[64];
+    bool is_worldspawn = false;
+    bool has_color = false;
+    int cr = 255;
+    int cg = 255;
+    int cb = 255;
+
+    while (ReadQuoted(&cursor, end, key, sizeof(key)) &&
+           ReadQuoted(&cursor, end, value, sizeof(value)))
+    {
+        if (strcmp(key, "classname") == 0 && strcmp(value, "worldspawn") == 0)
+            is_worldspawn = true;
+
+        if (strcmp(key, "_sunlight_color") == 0 && sscanf(value, "%d %d %d", &cr, &cg, &cb) == 3)
+            has_color = true;
+    }
+
+    if (!is_worldspawn || !has_color)
+        return false;
+
+    *r = (unsigned char)ClampColorComponent(cr);
+    *g = (unsigned char)ClampColorComponent(cg);
+    *b = (unsigned char)ClampColorComponent(cb);
+
+    return true;
+}
+
+bool BSP_GetSunlightColor(const BSP_Map *map, unsigned char *r, unsigned char *g, unsigned char *b)
+{
+    const char *cursor;
+    const char *end;
+
+    if (!map || !map->entities || !r || !g || !b)
+        return false;
+
+    cursor = map->entities;
+
+    while (NextEntityBlock(&cursor, &end))
+    {
+        if (ParseSunlightColorBlock(cursor, end, r, g, b))
+            return true;
+
+        cursor = end + 1;
+    }
+
+    return false;
+}
+
 bool BSP_GetPlayerStart(const BSP_Map *map, float *x, float *y, float *z)
 {
     float angle = 0.0f;

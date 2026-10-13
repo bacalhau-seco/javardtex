@@ -29,16 +29,37 @@ typedef struct {
 } BSP_Batch;
 
 typedef struct {
+    uint32_t vao;
+    uint32_t vbo;
+    float *vertices;
+    int count;
+    int capacity;
+    Shader shader;
+    int mvp_loc;
+    int camera_loc;
+    int time_loc;
+    int sky_color_loc;
+    int scale_loc;
+    int height_loc;
+    int speed_loc;
+    int pixels_loc;
+    int opacity_loc;
+    float color[3];
+} BSP_Sky;
+
+typedef struct {
     Shader shader;
     int mvp_loc;
     int lightmap_loc;
     BSP_Lightmap lightmap;
     BSP_Batch *batches;
     int num_batches;
+    BSP_Sky sky;
 } BSP_Renderer;
 
 bool BSP_RendererInit(BSP_Renderer *renderer, const BSP_Map *map);
 void BSP_RendererShutdown(BSP_Renderer *renderer);
 void BSP_Render(const BSP_Renderer *renderer);
+void BSP_RenderSky(const BSP_Renderer *renderer, Vector3 cameraPosition, float time);
 
 #endif
