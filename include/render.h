@@ -37,6 +37,7 @@ typedef struct {
     Shader shader;
     int mvp_loc;
     int sky_color_loc;
+    int camera_position_loc;
     float color[3];
 } BSP_Sky;
 

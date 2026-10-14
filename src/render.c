@@ -46,18 +46,26 @@ static const char *SkyVertexShader =
     "#version 330\n"
     "layout(location = 0) in vec3 vertexPosition;\n"
     "uniform mat4 mvp;\n"
+    "out vec3 fragPosition;\n"
     "void main()\n"
     "{\n"
+    "    fragPosition = vertexPosition;\n"
     "    gl_Position = mvp * vec4(vertexPosition, 1.0);\n"
     "}\n";
 
 static const char *SkyFragmentShader =
     "#version 330\n"
+    "in vec3 fragPosition;\n"
     "uniform vec3 skyColor;\n"
+    "uniform vec3 cameraPosition;\n"
     "out vec4 finalColor;\n"
     "void main()\n"
     "{\n"
-    "    finalColor = vec4(skyColor, 1.0);\n"
+    "    vec3 dir = normalize(fragPosition - cameraPosition);\n"
+    "    float height = clamp(dir.y, 0.0, 1.0);\n"
+    "    float blend = smoothstep(0.0, 0.45, height);\n"
+    "    vec3 color = mix(vec3(1.0), skyColor, blend);\n"
+    "    finalColor = vec4(color, 1.0);\n"
     "}\n";
 
 typedef struct {
@@ -321,6 +329,7 @@ static bool LoadSkyShader(BSP_Sky *sky)
 
     sky->mvp_loc = GetShaderLocation(sky->shader, "mvp");
     sky->sky_color_loc = GetShaderLocation(sky->shader, "skyColor");
+    sky->camera_position_loc = GetShaderLocation(sky->shader, "cameraPosition");
 
     return true;
 }
@@ -597,7 +606,8 @@ void BSP_RenderSky(const BSP_Renderer *renderer, Vector3 cameraPosition, float t
 {
     Matrix mvp;
 
-    (void)cameraPosition;
+    float cameraPositionValue[3];
+
     (void)time;
 
     if (!renderer || renderer->sky.vao == 0 || renderer->sky.shader.id == 0)
@@ -611,6 +621,11 @@ void BSP_RenderSky(const BSP_Renderer *renderer, Vector3 cameraPosition, float t
     mvp = MatrixMultiply(rlGetMatrixModelview(), rlGetMatrixProjection());
     SetShaderValueMatrix(renderer->sky.shader, renderer->sky.mvp_loc, mvp);
     SetShaderValue(renderer->sky.shader, renderer->sky.sky_color_loc, renderer->sky.color, SHADER_UNIFORM_VEC3);
+
+    cameraPositionValue[0] = cameraPosition.x;
+    cameraPositionValue[1] = cameraPosition.y;
+    cameraPositionValue[2] = cameraPosition.z;
+    SetShaderValue(renderer->sky.shader, renderer->sky.camera_position_loc, cameraPositionValue, SHADER_UNIFORM_VEC3);
 
     rlEnableVertexArray(renderer->sky.vao);
     rlDrawVertexArray(0, renderer->sky.count);
