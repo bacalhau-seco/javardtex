@@ -33,6 +33,80 @@ bool Menu_DrawButton(Rectangle button, const char *text)
     return (hovered && IsMouseButtonPressed(MOUSE_BUTTON_LEFT));
 }
 
+void Pause_Draw(void)
+{
+    enum {
+        PAUSE_BUTTON_CONTINUE,
+        PAUSE_BUTTON_SAVE_GAME,
+        PAUSE_BUTTON_LOAD_GAME,
+        PAUSE_BUTTON_SETTINGS,
+        PAUSE_BUTTON_QUIT,
+        PAUSE_BUTTON_COUNT
+    };
+
+    static const char *buttons[PAUSE_BUTTON_COUNT] = {
+        "CONTINUE",
+        "SAVE GAME",
+        "LOAD GAME",
+        "SETTINGS",
+        "QUIT GAME"
+    };
+
+    const int buttonCount = PAUSE_BUTTON_COUNT;
+
+    const int centerX = GetScreenWidth() / 2;
+    const int centerY = GetScreenHeight() / 2;
+
+    const int menuHeight = buttonCount * BUTTON_HEIGHT + (buttonCount - 1) * BUTTON_SPACING;
+    const int menuY = centerY - menuHeight / 2 + 40;
+
+    Menu_DrawText(Fonts_Get(FONT_MENU), GAMENAME, centerX, menuY - 130, 48, BLACK);
+
+    DrawTextEx(
+        Fonts_Get(FONT_UI),
+        VERSION,
+        (Vector2){ 10.0f, GetScreenHeight() - 30.0f },
+        20,
+        1.0f,
+        RAYWHITE
+    );
+
+    for (int i = 0; i < buttonCount; i++)
+    {
+        Rectangle button = {
+            centerX - BUTTON_WIDTH / 2,
+            menuY + i * (BUTTON_HEIGHT + BUTTON_SPACING),
+            BUTTON_WIDTH,
+            BUTTON_HEIGHT
+        };
+
+        if (!Menu_DrawButton(button, buttons[i]))
+            continue;
+
+        switch (i)
+        {
+        case PAUSE_BUTTON_CONTINUE:
+            gameState = GAME_STATE_GAME;
+            break;
+
+        case PAUSE_BUTTON_QUIT:
+            quitRequested = true;
+            break;
+
+        case PAUSE_BUTTON_SETTINGS:
+            Settings_OpenFrom(GAME_STATE_PAUSE);
+            gameState = GAME_STATE_MENU;
+            break;
+
+        case PAUSE_BUTTON_SAVE_GAME:
+            break;
+
+        case PAUSE_BUTTON_LOAD_GAME:
+            break;
+        }
+    }
+}
+
 void Title_Draw(void)
 {
     enum {

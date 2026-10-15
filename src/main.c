@@ -120,6 +120,7 @@ int main(int argc, char **argv)
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(screenWidth, screenHeight, "javardtex");
     SetTargetFPS((int)Cvar_Get("maxfps")->value);
+    SetExitKey(KEY_NULL);
 
     Fonts_Load();
 
@@ -173,12 +174,22 @@ int main(int argc, char **argv)
             break;
 
         case GAME_STATE_PAUSE:
+            if (IsKeyPressed(KEY_ESCAPE))
+                gameState = GAME_STATE_GAME;
             break;
 
         case GAME_STATE_MENU:
             break;
 
         case GAME_STATE_GAME:
+            if (IsKeyPressed(KEY_ESCAPE))
+            {
+                gameState = GAME_STATE_PAUSE;
+                tickAccumulator = 0.0f;
+                jumpPending = false;
+                break;
+            }
+
             if (ignoreMouseDelta)
             {
                 in.mouse.x = 0;
@@ -237,7 +248,7 @@ int main(int argc, char **argv)
         }
 
         BeginDrawing();
-            ClearBackground((gameState == GAME_STATE_GAME && mapLoaded) ? skyColor : RAYWHITE);
+            ClearBackground(((gameState == GAME_STATE_GAME || gameState == GAME_STATE_PAUSE) && mapLoaded) ? skyColor : RAYWHITE);
 
             switch (gameState)
             {
@@ -246,6 +257,15 @@ int main(int argc, char **argv)
                 break;
 
             case GAME_STATE_PAUSE:
+                if (mapLoaded)
+                {
+                    BeginMode3D(camera);
+                        BSP_RenderSky(&bspRenderer, camera.position, (float)GetTime());
+                        BSP_Render(&bspRenderer);
+                    EndMode3D();
+                }
+
+                Pause_Draw();
                 break;
 
             case GAME_STATE_MENU:

@@ -14,5 +14,6 @@ void Menu_DrawText(Font font, const char *text, int centerX, int y, float size, 
 bool Menu_DrawButton(Rectangle button, const char *text);
 
 void Title_Draw(void);
+void Pause_Draw(void);
 
 #endif

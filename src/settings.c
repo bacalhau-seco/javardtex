@@ -9,6 +9,7 @@
 #define SETTINGS_KEY_WIDTH 200
 
 static int capturingBind = -1;
+static GameState returnState = GAME_STATE_TITLE;
 
 static inline int RowsTop(void)
 {
@@ -72,7 +73,13 @@ static void DrawBindRow(int bind, int centerX, int y)
 
 void Settings_Open(void)
 {
+    Settings_OpenFrom(GAME_STATE_TITLE);
+}
+
+void Settings_OpenFrom(GameState back)
+{
     capturingBind = -1;
+    returnState = back;
 }
 
 void Settings_Draw(void)
@@ -105,5 +112,5 @@ void Settings_Draw(void)
         return;
     }
 
-    gameState = GAME_STATE_TITLE;
+    gameState = returnState;
 }
