@@ -2,6 +2,16 @@
 #include "../include/title.h"
 #include "../include/settings.h"
 
+float Menu_Width(float percent)
+{
+    return (float)GetRenderWidth() * percent;
+}
+
+float Menu_Height(float percent)
+{
+    return (float)GetRenderHeight() * percent;
+}
+
 void Menu_DrawText(Font font, const char *text, int centerX, int y, float size, Color color)
 {
     const Vector2 textSize = MeasureTextEx(font, text, size, 1.0f);
@@ -18,15 +28,17 @@ bool Menu_DrawButton(Rectangle button, const char *text)
 {
     const bool hovered = CheckCollisionPointRec(GetMousePosition(), button);
 
+    const float textSize = Menu_Height(MENU_BUTTON_TEXT_PCT);
+
     DrawRectangleRec(button, hovered ? GRAY : LIGHTGRAY);
-    DrawRectangleLinesEx(button, 2.0f, DARKGRAY);
+    DrawRectangleLinesEx(button, Menu_Height(MENU_BORDER_PCT), DARKGRAY);
 
     Menu_DrawText(
         Fonts_Get(FONT_MENU),
         text,
         button.x + button.width / 2,
-        button.y + (button.height - BUTTON_TEXT_SIZE) / 2,
-        BUTTON_TEXT_SIZE,
+        button.y + (button.height - textSize) / 2,
+        textSize,
         BLACK
     );
 
@@ -54,19 +66,23 @@ void Pause_Draw(void)
 
     const int buttonCount = PAUSE_BUTTON_COUNT;
 
-    const int centerX = GetScreenWidth() / 2;
-    const int centerY = GetScreenHeight() / 2;
+    const int centerX = GetRenderWidth() / 2;
+    const int centerY = GetRenderHeight() / 2;
 
-    const int menuHeight = buttonCount * BUTTON_HEIGHT + (buttonCount - 1) * BUTTON_SPACING;
-    const int menuY = centerY - menuHeight / 2 + 40;
+    const float buttonWidth = Menu_Width(MENU_BUTTON_WIDTH_PCT);
+    const float buttonHeight = Menu_Height(MENU_BUTTON_HEIGHT_PCT);
+    const float buttonSpacing = Menu_Height(MENU_BUTTON_SPACING_PCT);
 
-    Menu_DrawText(Fonts_Get(FONT_MENU), GAMENAME, centerX, menuY - 130, 48, BLACK);
+    const float menuHeight = buttonCount * buttonHeight + (buttonCount - 1) * buttonSpacing;
+    const float menuY = centerY - menuHeight / 2.0f + Menu_Height(0.06f);
+
+    Menu_DrawText(Fonts_Get(FONT_MENU), GAMENAME, centerX, menuY - Menu_Height(MENU_TITLE_TEXT_PCT) - Menu_Height(0.06f), Menu_Height(MENU_TITLE_TEXT_PCT), BLACK);
 
     DrawTextEx(
         Fonts_Get(FONT_UI),
         VERSION,
-        (Vector2){ 10.0f, GetScreenHeight() - 30.0f },
-        20,
+        (Vector2){ Menu_Width(MENU_MARGIN_PCT), GetRenderHeight() - Menu_Height(MENU_MARGIN_PCT) - Menu_Height(MENU_VERSION_TEXT_PCT) },
+        Menu_Height(MENU_VERSION_TEXT_PCT),
         1.0f,
         RAYWHITE
     );
@@ -74,10 +90,10 @@ void Pause_Draw(void)
     for (int i = 0; i < buttonCount; i++)
     {
         Rectangle button = {
-            centerX - BUTTON_WIDTH / 2,
-            menuY + i * (BUTTON_HEIGHT + BUTTON_SPACING),
-            BUTTON_WIDTH,
-            BUTTON_HEIGHT
+            centerX - buttonWidth / 2.0f,
+            menuY + i * (buttonHeight + buttonSpacing),
+            buttonWidth,
+            buttonHeight
         };
 
         if (!Menu_DrawButton(button, buttons[i]))
@@ -126,18 +142,22 @@ void Title_Draw(void)
 
     const int buttonCount = BUTTON_COUNT;
 
-    const int centerX = GetScreenWidth() / 2;
-    const int centerY = GetScreenHeight() / 2;
+    const int centerX = GetRenderWidth() / 2;
+    const int centerY = GetRenderHeight() / 2;
 
-    const int menuHeight = buttonCount * BUTTON_HEIGHT + (buttonCount - 1) * BUTTON_SPACING;
-    const int menuY = centerY - menuHeight / 2 + 40;
+    const float buttonWidth = Menu_Width(MENU_BUTTON_WIDTH_PCT);
+    const float buttonHeight = Menu_Height(MENU_BUTTON_HEIGHT_PCT);
+    const float buttonSpacing = Menu_Height(MENU_BUTTON_SPACING_PCT);
 
-    Menu_DrawText(Fonts_Get(FONT_MENU), GAMENAME, centerX, menuY - 130, 48, BLACK);
+    const float menuHeight = buttonCount * buttonHeight + (buttonCount - 1) * buttonSpacing;
+    const float menuY = centerY - menuHeight / 2.0f + Menu_Height(0.06f);
+
+    Menu_DrawText(Fonts_Get(FONT_MENU), GAMENAME, centerX, menuY - Menu_Height(MENU_TITLE_TEXT_PCT) - Menu_Height(0.06f), Menu_Height(MENU_TITLE_TEXT_PCT), BLACK);
     DrawTextEx(
         Fonts_Get(FONT_UI),
         VERSION,
-        (Vector2){ 10.0f, GetScreenHeight() - 30.0f },
-        20,
+        (Vector2){ Menu_Width(MENU_MARGIN_PCT), GetRenderHeight() - Menu_Height(MENU_MARGIN_PCT) - Menu_Height(MENU_VERSION_TEXT_PCT) },
+        Menu_Height(MENU_VERSION_TEXT_PCT),
         1.0f,
         BLACK
     );
@@ -145,10 +165,10 @@ void Title_Draw(void)
     for (int i = 0; i < buttonCount; i++)
     {
         Rectangle button = {
-            centerX - BUTTON_WIDTH / 2,
-            menuY + i * (BUTTON_HEIGHT + BUTTON_SPACING),
-            BUTTON_WIDTH,
-            BUTTON_HEIGHT
+            centerX - buttonWidth / 2.0f,
+            menuY + i * (buttonHeight + buttonSpacing),
+            buttonWidth,
+            buttonHeight
         };
 
         if (!Menu_DrawButton(button, buttons[i]))

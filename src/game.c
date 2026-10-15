@@ -15,6 +15,8 @@ static Font LoadGameFont(const char *path, int size)
 
     if (font.texture.id == 0)
         font = GetFontDefault();
+    else
+        SetTextureFilter(font.texture, TEXTURE_FILTER_BILINEAR);
 
     return font;
 }

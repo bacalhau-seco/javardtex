@@ -19,11 +19,63 @@ static Color skyColor = { 0, 0, 0, 255 };
 GameState gameState = GAME_STATE_TITLE;
 static GameState oldGameState = GAME_STATE_TITLE;
 static float tickAccumulator = 0.0f;
+static RenderTexture2D screenTarget = { 0 };
+static int targetWidth = 0;
+static int targetHeight = 0;
+static Vector2 mouseScale = { 1.0f, 1.0f };
 static bool jumpPending = false;
 
 #define TICK_RATE_MIN 10.0f
 #define TICK_RATE_MAX 1000.0f
 #define TICK_MAX_STEPS 8
+
+static void UpdateScreenTarget(void)
+{
+    const int width = (int)Cvar_Value("hres", 1280.0f);
+    const int height = (int)Cvar_Value("vres", 960.0f);
+
+    if (width <= 0 || height <= 0)
+        return;
+
+    if (width == targetWidth && height == targetHeight && screenTarget.id != 0)
+        return;
+
+    if (screenTarget.id != 0)
+        UnloadRenderTexture(screenTarget);
+
+    screenTarget = LoadRenderTexture(width, height);
+
+    if (screenTarget.id == 0)
+        return;
+
+    SetTextureFilter(screenTarget.texture, TEXTURE_FILTER_BILINEAR);
+
+    targetWidth = width;
+    targetHeight = height;
+}
+
+static Rectangle ScreenTargetDestination(void)
+{
+    const float windowWidth = (float)GetScreenWidth();
+    const float windowHeight = (float)GetScreenHeight();
+
+    float scale;
+
+    if (targetWidth <= 0 || targetHeight <= 0)
+        return (Rectangle){ 0.0f, 0.0f, windowWidth, windowHeight };
+
+    if (Cvar_Value("stretch", 0.0f) != 0.0f)
+        return (Rectangle){ 0.0f, 0.0f, windowWidth, windowHeight };
+
+    scale = fminf(windowWidth / (float)targetWidth, windowHeight / (float)targetHeight);
+
+    return (Rectangle){
+        (windowWidth - targetWidth * scale) * 0.5f,
+        (windowHeight - targetHeight * scale) * 0.5f,
+        targetWidth * scale,
+        targetHeight * scale
+    };
+}
 
 static inline float TickDelta(void)
 {
@@ -114,13 +166,29 @@ int main(int argc, char **argv)
 
     Cvar_Init();
 
-    const int screenWidth = Cvar_Get("hres")->value;
-    const int screenHeight = Cvar_Get("vres")->value;
-
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-    InitWindow(screenWidth, screenHeight, "javardtex");
+    InitWindow((int)Cvar_Get("hres")->value, (int)Cvar_Get("vres")->value, "javardtex");
     SetTargetFPS((int)Cvar_Get("maxfps")->value);
     SetExitKey(KEY_NULL);
+
+    {
+        const int monitor = GetCurrentMonitor();
+        const int nativeWidth = GetMonitorWidth(monitor);
+        const int nativeHeight = GetMonitorHeight(monitor);
+
+        if (nativeWidth > 0 && nativeHeight > 0)
+        {
+            Cvar_Get("nativehres")->value = (float)nativeWidth;
+            Cvar_Get("nativevres")->value = (float)nativeHeight;
+            Cvar_Get("hres")->value = (float)nativeWidth;
+            Cvar_Get("vres")->value = (float)nativeHeight;
+
+            SetWindowSize(nativeWidth, nativeHeight);
+        }
+
+        if (!IsWindowFullscreen())
+            ToggleFullscreen();
+    }
 
     Fonts_Load();
 
@@ -138,6 +206,18 @@ int main(int argc, char **argv)
 
     while (!WindowShouldClose() && !quitRequested)
     {
+        UpdateScreenTarget();
+
+        {
+            const Rectangle dest = ScreenTargetDestination();
+
+            mouseScale.x = (dest.width > 0.0f) ? targetWidth / dest.width : 1.0f;
+            mouseScale.y = (dest.height > 0.0f) ? targetHeight / dest.height : 1.0f;
+
+            SetMouseOffset((int)-dest.x, (int)-dest.y);
+            SetMouseScale(mouseScale.x, mouseScale.y);
+        }
+
         if (gameState != oldGameState)
         {
             switch (gameState)
@@ -197,6 +277,12 @@ int main(int argc, char **argv)
                 ignoreMouseDelta = false;
             }
 
+            if (mouseScale.x != 0.0f)
+                in.mouse.x /= mouseScale.x;
+
+            if (mouseScale.y != 0.0f)
+                in.mouse.y /= mouseScale.y;
+
             lookRotation.x -= in.mouse.x * Cvar_Get("mouseh")->value;
             lookRotation.y += in.mouse.y * Cvar_Get("mousev")->value;
             lookRotation.y = Clamp(lookRotation.y, -PI/2+0.001f, PI/2-0.001f);
@@ -247,7 +333,7 @@ int main(int argc, char **argv)
             break;
         }
 
-        BeginDrawing();
+        BeginTextureMode(screenTarget);
             ClearBackground(((gameState == GAME_STATE_GAME || gameState == GAME_STATE_PAUSE) && mapLoaded) ? skyColor : RAYWHITE);
 
             switch (gameState)
@@ -283,8 +369,24 @@ int main(int argc, char **argv)
                 break;
             }
 
+        EndTextureMode();
+
+        BeginDrawing();
+            ClearBackground(BLACK);
+
+            DrawTexturePro(
+                screenTarget.texture,
+                (Rectangle){ 0.0f, 0.0f, (float)targetWidth, (float)-targetHeight },
+                ScreenTargetDestination(),
+                (Vector2){ 0.0f, 0.0f },
+                0.0f,
+                WHITE
+            );
         EndDrawing();
     }
+
+    if (screenTarget.id != 0)
+        UnloadRenderTexture(screenTarget);
 
     Fonts_Unload();
 
