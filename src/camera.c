@@ -6,7 +6,7 @@ static Vector3 EyePosition(const Body *player)
 {
     return (Vector3){
         player->position.x,
-        player->position.y + Collision_EyeHeight(player->isCrouched),
+        player->position.y + Collision_EyeHeight(player->isCrouched) - player->stepViewOffset,
         player->position.z,
     };
 }

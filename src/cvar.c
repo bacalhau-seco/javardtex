@@ -93,4 +93,5 @@ void Cvar_Init(void)
     Cvar_Register("movestep", 1.0f);
     Cvar_Register("groundcheck", 2.0f);
     Cvar_Register("stepheight", 16.0f);
+    Cvar_Register("stepsmooth", 150.0f);
 }

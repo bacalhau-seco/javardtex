@@ -12,6 +12,7 @@ typedef struct {
     bool isGrounded;
     bool isCrouched;
     float crouchFeetOffset;
+    float stepViewOffset;
 } Body;
 
 void UpdatePlayer(const BSP_Map *map, Body *body, float rot, char side, char forward, bool jumpPressed, bool crouchHold, float delta);
