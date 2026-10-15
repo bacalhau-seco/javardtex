@@ -10,17 +10,17 @@
 #define COLLISION_TRACE_BUMPS 0.1f
 #define COLLISION_MAX_TRACE_DEPTH 256
 
-static Vector3 WorldToQuake(Vector3 w)
+static inline Vector3 WorldToQuake(Vector3 w)
 {
     return (Vector3){ w.x, -w.z, w.y };
 }
 
-static Vector3 QuakeToWorld(Vector3 q)
+static inline Vector3 QuakeToWorld(Vector3 q)
 {
     return (Vector3){ q.x, q.z, -q.y };
 }
 
-static float PlaneDistance(const BSP_Plane *plane, Vector3 p)
+static inline float PlaneDistance(const BSP_Plane *plane, Vector3 p)
 {
     return Vector3DotProduct(plane->normal, p) - plane->dist;
 }
@@ -39,14 +39,14 @@ float Collision_EyeHeight(bool crouched)
     return height - height / 5.0f;
 }
 
-static Vector3 Collision_FeetToOrigin(Vector3 feet, bool crouched)
+static inline Vector3 Collision_FeetToOrigin(Vector3 feet, bool crouched)
 {
     feet.y += Collision_PlayerHeight(crouched) * 0.5f;
 
     return feet;
 }
 
-static Vector3 Collision_OriginToFeet(Vector3 origin, bool crouched)
+static inline Vector3 Collision_OriginToFeet(Vector3 origin, bool crouched)
 {
     origin.y -= Collision_PlayerHeight(crouched) * 0.5f;
 
@@ -126,7 +126,7 @@ static int Collision_HullPointContents(const BSP_Map *map, int num, Vector3 orig
     return num;
 }
 
-static int Collision_HullHeadnode(const BSP_Map *map, bool crouched)
+static inline int Collision_HullHeadnode(const BSP_Map *map, bool crouched)
 {
     return map->models[0].headnode[crouched ? BSP_HULL_CROUCH : BSP_HULL_PLAYER];
 }

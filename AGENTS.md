@@ -17,6 +17,10 @@
 ## Comments
 Do not comment code, preserve existing comments
 
+## Inlining
+Small `static` helpers (short bodies, called in hot/chained paths) are marked `static inline`.
+Keep new small static helpers `static inline` too. Do not inline large or recursive functions.
+
 ## File System
 src/ - source files with all the logic
 include/ - headerfiles with macros and function definition

@@ -76,6 +76,7 @@ void Cvar_Init(void)
     Cvar_Register("mouseh", 0.001f);
     Cvar_Register("mousev", 0.001f);
     Cvar_Register("maxfps", 90);
+    Cvar_Register("tickrate", 128.0f);
     Cvar_Register("hres", 1280);
     Cvar_Register("vres", 960);
 
@@ -87,7 +88,7 @@ void Cvar_Init(void)
     Cvar_Register("standheight", 72.0f);
     Cvar_Register("crouchheight", 36.0f);
     Cvar_Register("accel", 5.0f);
-    Cvar_Register("airaccel", 10.0f);
+    Cvar_Register("airaccel", 100.0f);
     Cvar_Register("airwishcap", 30.0f);
     Cvar_Register("jumppenalty", 0.0f);
     Cvar_Register("movestep", 1.0f);

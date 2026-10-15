@@ -11,7 +11,7 @@
 #define BSP_PALETTE_COLORS 256
 #define BSP_PALETTE_BYTES (BSP_PALETTE_COLORS * 3)
 
-static int32_t ReadInt32(const uint8_t *p)
+static inline int32_t ReadInt32(const uint8_t *p)
 {
     int32_t value;
 
@@ -19,7 +19,7 @@ static int32_t ReadInt32(const uint8_t *p)
     return value;
 }
 
-static uint16_t ReadUInt16(const uint8_t *p)
+static inline uint16_t ReadUInt16(const uint8_t *p)
 {
     uint16_t value;
 
@@ -551,6 +551,91 @@ bool BSP_GetSunlightColor(const BSP_Map *map, unsigned char *r, unsigned char *g
     while (NextEntityBlock(&cursor, &end))
     {
         if (ParseSunlightColorBlock(cursor, end, r, g, b))
+            return true;
+
+        cursor = end + 1;
+    }
+
+    return false;
+}
+
+static float ClampFloat(float value, float min, float max)
+{
+    if (value < min)
+        return min;
+
+    if (value > max)
+        return max;
+
+    return value;
+}
+
+static inline void ScaleSkyColor(const int color[3], float intensity, float *out)
+{
+    float scale = ClampFloat(intensity / 200.0f, 0.35f, 1.0f);
+    int i;
+
+    for (i = 0; i < 3; i++)
+        out[i] = (float)ClampColorComponent(color[i]) / 255.0f * scale;
+}
+
+static bool ParseSkyGradientBlock(const char *start, const char *end, BSP_SkyGradient *out)
+{
+    const char *cursor = start;
+    char key[64];
+    char value[64];
+    bool is_worldspawn = false;
+    int sun_color[3] = { 255, 255, 255 };
+    int sun2_color[3] = { 255, 255, 255 };
+    float sun = 0.0f;
+    float sun2 = 0.0f;
+
+    while (ReadQuoted(&cursor, end, key, sizeof(key)) &&
+           ReadQuoted(&cursor, end, value, sizeof(value)))
+    {
+        if (strcmp(key, "classname") == 0 && strcmp(value, "worldspawn") == 0)
+            is_worldspawn = true;
+
+        if (strcmp(key, "_sunlight") == 0)
+            sscanf(value, "%f", &sun);
+
+        if (strcmp(key, "_sunlight2") == 0)
+            sscanf(value, "%f", &sun2);
+
+        if (strcmp(key, "_sunlight_color") == 0)
+            sscanf(value, "%d %d %d", &sun_color[0], &sun_color[1], &sun_color[2]);
+
+        if (strcmp(key, "_sunlight2_color") == 0)
+            sscanf(value, "%d %d %d", &sun2_color[0], &sun2_color[1], &sun2_color[2]);
+    }
+
+    if (!is_worldspawn)
+        return false;
+
+    ScaleSkyColor(sun_color, 200.0f, out->top);
+    ScaleSkyColor(sun2_color, sun2, out->bottom);
+
+    if (sun + sun2 > 0.0f)
+        out->fade = ClampFloat(sun / (sun + sun2), 0.15f, 0.85f);
+    else
+        out->fade = 0.5f;
+
+    return true;
+}
+
+bool BSP_GetSkyGradient(const BSP_Map *map, BSP_SkyGradient *out)
+{
+    const char *cursor;
+    const char *end;
+
+    if (!map || !map->entities || !out)
+        return false;
+
+    cursor = map->entities;
+
+    while (NextEntityBlock(&cursor, &end))
+    {
+        if (ParseSkyGradientBlock(cursor, end, out))
             return true;
 
         cursor = end + 1;

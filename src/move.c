@@ -250,7 +250,7 @@ static void DecayStepViewOffset(Body *body, float delta)
         body->stepViewOffset = 0.0f;
 }
 
-static float HorizontalDistanceSquared(Vector3 from, Vector3 to)
+static inline float HorizontalDistanceSquared(Vector3 from, Vector3 to)
 {
     float dx = to.x - from.x;
     float dz = to.z - from.z;

@@ -18,6 +18,24 @@ static bool insideNextLevel = false;
 static Color skyColor = { 0, 0, 0, 255 };
 GameState gameState = GAME_STATE_TITLE;
 static GameState oldGameState = GAME_STATE_TITLE;
+static float tickAccumulator = 0.0f;
+static bool jumpPending = false;
+
+#define TICK_RATE_MIN 10.0f
+#define TICK_RATE_MAX 1000.0f
+#define TICK_MAX_STEPS 8
+
+static inline float TickDelta(void)
+{
+    float rate = Cvar_Value("tickrate", 128.0f);
+
+    if (rate < TICK_RATE_MIN)
+        rate = TICK_RATE_MIN;
+    else if (rate > TICK_RATE_MAX)
+        rate = TICK_RATE_MAX;
+
+    return 1.0f / rate;
+}
 
 static void UnloadMap(void)
 {
@@ -53,6 +71,8 @@ static bool LoadMap(const char *path)
     bspRenderer = loadedRenderer;
     mapLoaded = true;
     insideNextLevel = true;
+    tickAccumulator = 0.0f;
+    jumpPending = false;
 
     Body fresh = { 0 };
     player = fresh;
@@ -137,7 +157,8 @@ int main(int argc, char **argv)
         }
 
         InputState in = GetInputState();
-        float delta = GetFrameTime();
+        const float delta = GetFrameTime();
+        const float tickDelta = TickDelta();
 
         switch (gameState)
         {
@@ -169,16 +190,31 @@ int main(int argc, char **argv)
             lookRotation.y += in.mouse.y * Cvar_Get("mousev")->value;
             lookRotation.y = Clamp(lookRotation.y, -PI/2+0.001f, PI/2-0.001f);
 
-            UpdatePlayer(
-                &bsp,
-                &player,
-                lookRotation.x,
-                in.side,
-                in.forward,
-                in.jump,
-                in.crouch,
-                delta
-            );
+            if (in.jump)
+                jumpPending = true;
+
+            tickAccumulator += delta;
+
+            if (tickAccumulator > tickDelta * TICK_MAX_STEPS)
+                tickAccumulator = tickDelta * TICK_MAX_STEPS;
+
+            while (tickAccumulator >= tickDelta)
+            {
+                tickAccumulator -= tickDelta;
+
+                UpdatePlayer(
+                    &bsp,
+                    &player,
+                    lookRotation.x,
+                    in.side,
+                    in.forward,
+                    jumpPending,
+                    in.crouch,
+                    tickDelta
+                );
+
+                jumpPending = false;
+            }
 
             Camera_Update(&camera, &player, lookRotation);
 

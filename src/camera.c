@@ -2,7 +2,7 @@
 #include "../include/collision.h"
 #include "../include/defs.h"
 
-static Vector3 EyePosition(const Body *player)
+static inline Vector3 EyePosition(const Body *player)
 {
     return (Vector3){
         player->position.x,

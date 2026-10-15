@@ -10,7 +10,7 @@
 
 static int capturingBind = -1;
 
-static int RowsTop(void)
+static inline int RowsTop(void)
 {
     const int rowsHeight = BIND_COUNT * (SETTINGS_ROW_HEIGHT + SETTINGS_ROW_SPACING);
 

@@ -59,7 +59,14 @@ void Title_Draw(void)
     const int menuY = centerY - menuHeight / 2 + 40;
 
     Menu_DrawText(Fonts_Get(FONT_MENU), GAMENAME, centerX, menuY - 130, 48, BLACK);
-    Menu_DrawText(Fonts_Get(FONT_UI), VERSION, centerX, menuY - 70, 20, RAYWHITE);
+    DrawTextEx(
+        Fonts_Get(FONT_UI),
+        VERSION,
+        (Vector2){ 10.0f, GetScreenHeight() - 30.0f },
+        20,
+        1.0f,
+        BLACK
+    );
 
     for (int i = 0; i < buttonCount; i++)
     {

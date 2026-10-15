@@ -57,14 +57,16 @@ static const char *SkyFragmentShader =
     "#version 330\n"
     "in vec3 fragPosition;\n"
     "uniform vec3 skyColor;\n"
+    "uniform vec3 horizonColor;\n"
     "uniform vec3 cameraPosition;\n"
+    "uniform float skyFade;\n"
     "out vec4 finalColor;\n"
     "void main()\n"
     "{\n"
     "    vec3 dir = normalize(fragPosition - cameraPosition);\n"
     "    float height = clamp(dir.y, 0.0, 1.0);\n"
-    "    float blend = smoothstep(0.0, 0.45, height);\n"
-    "    vec3 color = mix(vec3(1.0), skyColor, blend);\n"
+    "    float blend = pow(height, clamp(skyFade, 0.15, 0.85) * 2.0);\n"
+    "    vec3 color = mix(horizonColor, skyColor, blend);\n"
     "    finalColor = vec4(color, 1.0);\n"
     "}\n";
 
@@ -74,7 +76,7 @@ typedef struct {
     const BSP_FaceLightmap *lightmap;
 } FaceContext;
 
-static bool IsSkyTexture(const char *name)
+static inline bool IsSkyTexture(const char *name)
 {
     return strncmp(name, "sky", 3) == 0;
 }
@@ -330,6 +332,8 @@ static bool LoadSkyShader(BSP_Sky *sky)
     sky->mvp_loc = GetShaderLocation(sky->shader, "mvp");
     sky->sky_color_loc = GetShaderLocation(sky->shader, "skyColor");
     sky->camera_position_loc = GetShaderLocation(sky->shader, "cameraPosition");
+    sky->horizon_color_loc = GetShaderLocation(sky->shader, "horizonColor");
+    sky->fade_loc = GetShaderLocation(sky->shader, "skyFade");
 
     return true;
 }
@@ -360,13 +364,30 @@ static void BuildSky(BSP_Renderer *renderer, const BSP_Map *map)
     unsigned char r = 255;
     unsigned char g = 255;
     unsigned char b = 255;
+    BSP_SkyGradient gradient;
     int i;
+
+    renderer->sky.horizon_color[0] = 1.0f;
+    renderer->sky.horizon_color[1] = 1.0f;
+    renderer->sky.horizon_color[2] = 1.0f;
+    renderer->sky.fade = 0.45f;
 
     if (BSP_GetSunlightColor(map, &r, &g, &b))
     {
         renderer->sky.color[0] = (float)r / 255.0f;
         renderer->sky.color[1] = (float)g / 255.0f;
         renderer->sky.color[2] = (float)b / 255.0f;
+    }
+
+    if (BSP_GetSkyGradient(map, &gradient))
+    {
+        for (i = 0; i < 3; i++)
+        {
+            renderer->sky.color[i] = gradient.top[i];
+            renderer->sky.horizon_color[i] = gradient.bottom[i];
+        }
+
+        renderer->sky.fade = gradient.fade;
     }
 
     for (i = 0; i < map->num_faces; i++)
@@ -452,7 +473,7 @@ static void CreateBatchTextures(BSP_Renderer *renderer, const BSP_Map *map)
     }
 }
 
-static void BuildBatches(BSP_Renderer *renderer, const BSP_Map *map)
+static inline void BuildBatches(BSP_Renderer *renderer, const BSP_Map *map)
 {
     int i;
 
@@ -626,6 +647,8 @@ void BSP_RenderSky(const BSP_Renderer *renderer, Vector3 cameraPosition, float t
     cameraPositionValue[1] = cameraPosition.y;
     cameraPositionValue[2] = cameraPosition.z;
     SetShaderValue(renderer->sky.shader, renderer->sky.camera_position_loc, cameraPositionValue, SHADER_UNIFORM_VEC3);
+    SetShaderValue(renderer->sky.shader, renderer->sky.horizon_color_loc, renderer->sky.horizon_color, SHADER_UNIFORM_VEC3);
+    SetShaderValue(renderer->sky.shader, renderer->sky.fade_loc, &renderer->sky.fade, SHADER_UNIFORM_FLOAT);
 
     rlEnableVertexArray(renderer->sky.vao);
     rlDrawVertexArray(0, renderer->sky.count);

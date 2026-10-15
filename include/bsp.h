@@ -172,4 +172,12 @@ bool BSP_GetPlayerStartAngle(const BSP_Map *map, float *angle);
 bool BSP_GetNextLevel(const BSP_Map *map, BSP_NextLevel *out);
 bool BSP_GetSunlightColor(const BSP_Map *map, unsigned char *r, unsigned char *g, unsigned char *b);
 
+typedef struct {
+    float top[3];
+    float bottom[3];
+    float fade;
+} BSP_SkyGradient;
+
+bool BSP_GetSkyGradient(const BSP_Map *map, BSP_SkyGradient *out);
+
 #endif

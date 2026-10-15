@@ -16,7 +16,7 @@ static InputBindSlot binds[BIND_COUNT] = {
     { "CROUCH", KEY_LEFT_CONTROL }
 };
 
-static bool IsValidBind(int bind)
+static inline bool IsValidBind(int bind)
 {
     return bind >= 0 && bind < BIND_COUNT;
 }
@@ -67,7 +67,7 @@ static bool IsBindDown(int key)
     return IsKeyDown(key);
 }
 
-static bool IsBindPressed(int key)
+static inline bool IsBindPressed(int key)
 {
     if (key == INPUT_BIND_MWHEELUP || key == INPUT_BIND_MWHEELDOWN)
         return IsBindDown(key);
