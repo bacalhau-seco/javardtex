@@ -60,11 +60,12 @@ static const char *SkyFragmentShader =
     "uniform vec3 horizonColor;\n"
     "uniform vec3 cameraPosition;\n"
     "uniform float skyFade;\n"
+    "uniform vec3 sunDirection;\n"
     "out vec4 finalColor;\n"
     "void main()\n"
     "{\n"
     "    vec3 dir = normalize(fragPosition - cameraPosition);\n"
-    "    float height = clamp(dir.y, 0.0, 1.0);\n"
+    "    float height = clamp(dot(dir, normalize(sunDirection)), 0.0, 1.0);\n"
     "    float blend = pow(height, clamp(skyFade, 0.15, 0.85) * 2.0);\n"
     "    vec3 color = mix(horizonColor, skyColor, blend);\n"
     "    finalColor = vec4(color, 1.0);\n"
@@ -334,6 +335,7 @@ static bool LoadSkyShader(BSP_Sky *sky)
     sky->camera_position_loc = GetShaderLocation(sky->shader, "cameraPosition");
     sky->horizon_color_loc = GetShaderLocation(sky->shader, "horizonColor");
     sky->fade_loc = GetShaderLocation(sky->shader, "skyFade");
+    sky->sun_direction_loc = GetShaderLocation(sky->shader, "sunDirection");
 
     return true;
 }
@@ -370,6 +372,9 @@ static void BuildSky(BSP_Renderer *renderer, const BSP_Map *map)
     renderer->sky.horizon_color[0] = 1.0f;
     renderer->sky.horizon_color[1] = 1.0f;
     renderer->sky.horizon_color[2] = 1.0f;
+    renderer->sky.sun_direction[0] = 0.0f;
+    renderer->sky.sun_direction[1] = 1.0f;
+    renderer->sky.sun_direction[2] = 0.0f;
     renderer->sky.fade = 0.45f;
 
     if (BSP_GetSunlightColor(map, &r, &g, &b))
@@ -385,6 +390,7 @@ static void BuildSky(BSP_Renderer *renderer, const BSP_Map *map)
         {
             renderer->sky.color[i] = gradient.top[i];
             renderer->sky.horizon_color[i] = gradient.bottom[i];
+            renderer->sky.sun_direction[i] = gradient.sun_direction[i];
         }
 
         renderer->sky.fade = gradient.fade;
@@ -649,6 +655,7 @@ void BSP_RenderSky(const BSP_Renderer *renderer, Vector3 cameraPosition, float t
     SetShaderValue(renderer->sky.shader, renderer->sky.camera_position_loc, cameraPositionValue, SHADER_UNIFORM_VEC3);
     SetShaderValue(renderer->sky.shader, renderer->sky.horizon_color_loc, renderer->sky.horizon_color, SHADER_UNIFORM_VEC3);
     SetShaderValue(renderer->sky.shader, renderer->sky.fade_loc, &renderer->sky.fade, SHADER_UNIFORM_FLOAT);
+    SetShaderValue(renderer->sky.shader, renderer->sky.sun_direction_loc, renderer->sky.sun_direction, SHADER_UNIFORM_VEC3);
 
     rlEnableVertexArray(renderer->sky.vao);
     rlDrawVertexArray(0, renderer->sky.count);

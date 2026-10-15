@@ -18,6 +18,7 @@ float Menu_Width(float percent);
 float Menu_Height(float percent);
 void Menu_DrawText(Font font, const char *text, int centerX, int y, float size, Color color);
 bool Menu_DrawButton(Rectangle button, const char *text);
+bool Menu_IsHovered(Rectangle button);
 
 void Title_Draw(void);
 void Pause_Draw(void);

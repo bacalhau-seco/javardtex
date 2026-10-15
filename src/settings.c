@@ -56,6 +56,8 @@ static const SettingsResolution resolutions[] = {
 #define SETTINGS_RESOLUTION_COUNT ((int)(sizeof(resolutions) / sizeof(resolutions[0])))
 
 static int capturingBind = -1;
+static int capturingSlot = 0;
+static bool captureCancelled = false;
 static GameState returnState = GAME_STATE_TITLE;
 static SettingsTab activeTab = SETTINGS_TAB_VIDEO;
 static SettingsAspect activeAspect = SETTINGS_ASPECT_16_9;
@@ -148,7 +150,7 @@ static void DrawNativeRow(int centerX, int y)
     };
 
     const char *text = TextFormat(
-        "%sNATIVO (%dx%d)",
+        "%sNATIVE (%dx%d)",
         IsCurrentResolution(NativeWidth(), NativeHeight()) ? "> " : "",
         NativeWidth(),
         NativeHeight()
@@ -171,7 +173,7 @@ static void DrawScalingRow(int centerX, int y)
 
     const bool stretched = (stretch != NULL && stretch->value != 0.0f);
 
-    if (!Menu_DrawButton(button, stretched ? "SCALING: STRETCH" : "SCALING: BORDAS"))
+    if (!Menu_DrawButton(button, stretched ? "SCALING: STRETCH" : "SCALING: BORDERS"))
         return;
 
     if (stretch != NULL)
@@ -254,12 +256,15 @@ static void UpdateCapture(void)
 {
     int key;
 
+    captureCancelled = false;
+
     if (capturingBind < 0)
         return;
 
     if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT))
     {
         capturingBind = -1;
+        captureCancelled = true;
         return;
     }
 
@@ -269,23 +274,18 @@ static void UpdateCapture(void)
         return;
 
     if (key != KEY_ESCAPE)
-        Input_SetBindKey((InputBind)capturingBind, key);
+        Input_SetBindKey((InputBind)capturingBind, capturingSlot, key);
 
     capturingBind = -1;
 }
 
 static void DrawBindRow(int bind, int centerX, int y)
 {
-    const Rectangle keyButton = {
-        centerX + Menu_Width(SETTINGS_LABEL_WIDTH_PCT) / 2.0f - Menu_Width(SETTINGS_KEY_WIDTH_PCT) / 2.0f + Menu_Width(MENU_MARGIN_PCT),
-        y,
-        Menu_Width(SETTINGS_KEY_WIDTH_PCT),
-        Menu_Height(SETTINGS_ROW_HEIGHT_PCT)
-    };
+    const float keyWidth = Menu_Width(SETTINGS_KEY_WIDTH_PCT);
+    const float keySpacing = Menu_Width(MENU_MARGIN_PCT);
+    const float startX = centerX + Menu_Width(MENU_MARGIN_PCT);
 
-    const char *keyText = capturingBind == bind
-        ? "..."
-        : Input_KeyName(Input_GetBindKey((InputBind)bind));
+    int slot;
 
     Menu_DrawText(
         Fonts_Get(FONT_UI),
@@ -296,11 +296,38 @@ static void DrawBindRow(int bind, int centerX, int y)
         BLACK
     );
 
-    if (!Menu_DrawButton(keyButton, keyText))
-        return;
+    for (slot = 0; slot < INPUT_BIND_SLOTS; slot++)
+    {
+        const Rectangle keyButton = {
+            startX + slot * (keyWidth + keySpacing),
+            y,
+            keyWidth,
+            Menu_Height(SETTINGS_ROW_HEIGHT_PCT)
+        };
 
-    if (capturingBind < 0)
-        capturingBind = bind;
+        const bool capturing = capturingBind == bind && capturingSlot == slot;
+
+        const char *keyText = capturing
+            ? "..."
+            : Input_KeyName(Input_GetBindKey((InputBind)bind, slot));
+
+        if (Menu_DrawButton(keyButton, keyText))
+        {
+            if (capturingBind < 0)
+            {
+                capturingBind = bind;
+                capturingSlot = slot;
+            }
+
+            continue;
+        }
+
+        if (capturingBind >= 0 || captureCancelled)
+            continue;
+
+        if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) && Menu_IsHovered(keyButton))
+            Input_ClearBindKey((InputBind)bind, slot);
+    }
 }
 
 void Settings_Open(void)
@@ -311,6 +338,8 @@ void Settings_Open(void)
 void Settings_OpenFrom(GameState back)
 {
     capturingBind = -1;
+    capturingSlot = 0;
+    captureCancelled = false;
     returnState = back;
     activeTab = SETTINGS_TAB_VIDEO;
 

@@ -5,10 +5,10 @@
 #define VERSION "0.0.2"
 #define AUTHOR "bacalhau"
 
-#define FONT_UI_PATH "game/fonts/ui.ttf"
+#define FONT_UI_PATH "game/fonts/JMHTypewriter-bold.ttf"
 #define FONT_UI_SIZE 64
 
-#define FONT_MENU_PATH "game/fonts/menu.ttf"
+#define FONT_MENU_PATH "game/fonts/JMHTypewriter-bold.ttf"
 #define FONT_MENU_SIZE 96
 
 typedef enum {

@@ -24,9 +24,14 @@ void Menu_DrawText(Font font, const char *text, int centerX, int y, float size, 
     DrawTextEx(font, text, position, size, 1.0f, color);
 }
 
+bool Menu_IsHovered(Rectangle button)
+{
+    return CheckCollisionPointRec(GetMousePosition(), button);
+}
+
 bool Menu_DrawButton(Rectangle button, const char *text)
 {
-    const bool hovered = CheckCollisionPointRec(GetMousePosition(), button);
+    const bool hovered = Menu_IsHovered(button);
 
     const float textSize = Menu_Height(MENU_BUTTON_TEXT_PCT);
 

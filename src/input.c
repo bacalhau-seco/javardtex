@@ -4,21 +4,26 @@
 
 typedef struct {
     const char *label;
-    int key;
+    int keys[INPUT_BIND_SLOTS];
 } InputBindSlot;
 
 static InputBindSlot binds[BIND_COUNT] = {
-    { "MOVE FORWARD", KEY_W },
-    { "MOVE BACK", KEY_S },
-    { "MOVE LEFT", KEY_A },
-    { "MOVE RIGHT", KEY_D },
-    { "JUMP", KEY_SPACE },
-    { "CROUCH", KEY_LEFT_CONTROL }
+    { "MOVE FORWARD", { KEY_W, KEY_UP } },
+    { "MOVE BACK", { KEY_S, KEY_DOWN } },
+    { "MOVE LEFT", { KEY_A, KEY_LEFT } },
+    { "MOVE RIGHT", { KEY_D, KEY_RIGHT } },
+    { "JUMP", { KEY_SPACE, KEY_NULL } },
+    { "CROUCH", { KEY_LEFT_CONTROL, KEY_NULL } }
 };
 
 static inline bool IsValidBind(int bind)
 {
     return bind >= 0 && bind < BIND_COUNT;
+}
+
+static inline bool IsValidSlot(int slot)
+{
+    return slot >= 0 && slot < INPUT_BIND_SLOTS;
 }
 
 const char *Input_BindLabel(InputBind bind)
@@ -29,31 +34,40 @@ const char *Input_BindLabel(InputBind bind)
     return binds[bind].label;
 }
 
-int Input_GetBindKey(InputBind bind)
+int Input_GetBindKey(InputBind bind, int slot)
 {
-    if (!IsValidBind(bind))
+    if (!IsValidBind(bind) || !IsValidSlot(slot))
         return KEY_NULL;
 
-    return binds[bind].key;
+    return binds[bind].keys[slot];
 }
 
-void Input_SetBindKey(InputBind bind, int key)
+void Input_SetBindKey(InputBind bind, int slot, int key)
 {
     int i;
+    int j;
 
-    if (!IsValidBind(bind))
+    if (!IsValidBind(bind) || !IsValidSlot(slot))
         return;
 
     if (key != KEY_NULL)
     {
         for (i = 0; i < BIND_COUNT; i++)
         {
-            if (i != (int)bind && binds[i].key == key)
-                binds[i].key = KEY_NULL;
+            for (j = 0; j < INPUT_BIND_SLOTS; j++)
+            {
+                if ((i != (int)bind || j != slot) && binds[i].keys[j] == key)
+                    binds[i].keys[j] = KEY_NULL;
+            }
         }
     }
 
-    binds[bind].key = key;
+    binds[bind].keys[slot] = key;
+}
+
+void Input_ClearBindKey(InputBind bind, int slot)
+{
+    Input_SetBindKey(bind, slot, KEY_NULL);
 }
 
 static bool IsBindDown(int key)
@@ -73,6 +87,32 @@ static inline bool IsBindPressed(int key)
         return IsBindDown(key);
 
     return IsKeyPressed(key);
+}
+
+static bool IsBindActionDown(InputBind bind)
+{
+    int slot;
+
+    for (slot = 0; slot < INPUT_BIND_SLOTS; slot++)
+    {
+        if (binds[bind].keys[slot] != KEY_NULL && IsBindDown(binds[bind].keys[slot]))
+            return true;
+    }
+
+    return false;
+}
+
+static bool IsBindActionPressed(InputBind bind)
+{
+    int slot;
+
+    for (slot = 0; slot < INPUT_BIND_SLOTS; slot++)
+    {
+        if (binds[bind].keys[slot] != KEY_NULL && IsBindPressed(binds[bind].keys[slot]))
+            return true;
+    }
+
+    return false;
 }
 
 int Input_PollBindKey(void)
@@ -169,10 +209,10 @@ InputState GetInputState(void)
     InputState in = {0};
 
     in.mouse = GetMouseDelta();
-    in.side = IsBindDown(binds[BIND_RIGHT].key) - IsBindDown(binds[BIND_LEFT].key);
-    in.forward = IsBindDown(binds[BIND_FORWARD].key) - IsBindDown(binds[BIND_BACK].key);
-    in.jump = IsBindPressed(binds[BIND_JUMP].key);
-    in.crouch = IsBindDown(binds[BIND_CROUCH].key);
+    in.side = IsBindActionDown(BIND_RIGHT) - IsBindActionDown(BIND_LEFT);
+    in.forward = IsBindActionDown(BIND_FORWARD) - IsBindActionDown(BIND_BACK);
+    in.jump = IsBindActionPressed(BIND_JUMP);
+    in.crouch = IsBindActionDown(BIND_CROUCH);
 
     return in;
 }

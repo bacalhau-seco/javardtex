@@ -176,6 +176,7 @@ typedef struct {
     float top[3];
     float bottom[3];
     float fade;
+    float sun_direction[3];
 } BSP_SkyGradient;
 
 bool BSP_GetSkyGradient(const BSP_Map *map, BSP_SkyGradient *out);

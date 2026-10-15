@@ -579,14 +579,29 @@ static inline void ScaleSkyColor(const int color[3], float intensity, float *out
         out[i] = (float)ClampColorComponent(color[i]) / 255.0f * scale;
 }
 
+static void SunDirectionFromMangle(const float mangle[3], float *out)
+{
+    float yaw = mangle[0] * DEG2RAD;
+    float pitch = mangle[1] * DEG2RAD;
+    float x = cosf(yaw) * cosf(pitch);
+    float y = sinf(yaw) * cosf(pitch);
+    float z = sinf(pitch);
+
+    out[0] = -x;
+    out[1] = -z;
+    out[2] = y;
+}
+
 static bool ParseSkyGradientBlock(const char *start, const char *end, BSP_SkyGradient *out)
 {
     const char *cursor = start;
     char key[64];
     char value[64];
     bool is_worldspawn = false;
+    bool has_mangle = false;
     int sun_color[3] = { 255, 255, 255 };
     int sun2_color[3] = { 255, 255, 255 };
+    float mangle[3] = { 0.0f, -90.0f, 0.0f };
     float sun = 0.0f;
     float sun2 = 0.0f;
 
@@ -598,6 +613,10 @@ static bool ParseSkyGradientBlock(const char *start, const char *end, BSP_SkyGra
 
         if (strcmp(key, "_sunlight") == 0)
             sscanf(value, "%f", &sun);
+
+        if ((strcmp(key, "_sun_mangle") == 0 || strcmp(key, "_sunlight_mangle") == 0)
+            && sscanf(value, "%f %f %f", &mangle[0], &mangle[1], &mangle[2]) >= 2)
+            has_mangle = true;
 
         if (strcmp(key, "_sunlight2") == 0)
             sscanf(value, "%f", &sun2);
@@ -611,6 +630,17 @@ static bool ParseSkyGradientBlock(const char *start, const char *end, BSP_SkyGra
 
     if (!is_worldspawn)
         return false;
+
+    if (has_mangle)
+    {
+        SunDirectionFromMangle(mangle, out->sun_direction);
+    }
+    else
+    {
+        out->sun_direction[0] = 0.0f;
+        out->sun_direction[1] = 1.0f;
+        out->sun_direction[2] = 0.0f;
+    }
 
     ScaleSkyColor(sun_color, 200.0f, out->top);
     ScaleSkyColor(sun2_color, sun2, out->bottom);

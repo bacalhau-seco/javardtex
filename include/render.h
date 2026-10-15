@@ -40,8 +40,10 @@ typedef struct {
     int camera_position_loc;
     int horizon_color_loc;
     int fade_loc;
+    int sun_direction_loc;
     float color[3];
     float horizon_color[3];
+    float sun_direction[3];
     float fade;
 } BSP_Sky;
 
