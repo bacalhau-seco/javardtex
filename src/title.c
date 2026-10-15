@@ -1,11 +1,8 @@
 #include "../include/defs.h"
+#include "../include/title.h"
+#include "../include/settings.h"
 
-#define BUTTON_WIDTH 260
-#define BUTTON_HEIGHT 44
-#define BUTTON_SPACING 12
-#define BUTTON_TEXT_SIZE 24
-
-static void DrawTitleText(Font font, const char *text, int centerX, int y, float size, Color color)
+void Menu_DrawText(Font font, const char *text, int centerX, int y, float size, Color color)
 {
     const Vector2 textSize = MeasureTextEx(font, text, size, 1.0f);
 
@@ -17,14 +14,14 @@ static void DrawTitleText(Font font, const char *text, int centerX, int y, float
     DrawTextEx(font, text, position, size, 1.0f, color);
 }
 
-static bool DrawMenuButton(Rectangle button, const char *text)
+bool Menu_DrawButton(Rectangle button, const char *text)
 {
     const bool hovered = CheckCollisionPointRec(GetMousePosition(), button);
 
     DrawRectangleRec(button, hovered ? GRAY : LIGHTGRAY);
     DrawRectangleLinesEx(button, 2.0f, DARKGRAY);
 
-    DrawTitleText(
+    Menu_DrawText(
         Fonts_Get(FONT_MENU),
         text,
         button.x + button.width / 2,
@@ -61,8 +58,8 @@ void Title_Draw(void)
     const int menuHeight = buttonCount * BUTTON_HEIGHT + (buttonCount - 1) * BUTTON_SPACING;
     const int menuY = centerY - menuHeight / 2 + 40;
 
-    DrawTitleText(Fonts_Get(FONT_MENU), GAMENAME, centerX, menuY - 130, 48, BLACK);
-    DrawTitleText(Fonts_Get(FONT_UI), VERSION, centerX, menuY - 70, 20, RAYWHITE);
+    Menu_DrawText(Fonts_Get(FONT_MENU), GAMENAME, centerX, menuY - 130, 48, BLACK);
+    Menu_DrawText(Fonts_Get(FONT_UI), VERSION, centerX, menuY - 70, 20, RAYWHITE);
 
     for (int i = 0; i < buttonCount; i++)
     {
@@ -73,7 +70,7 @@ void Title_Draw(void)
             BUTTON_HEIGHT
         };
 
-        if (!DrawMenuButton(button, buttons[i]))
+        if (!Menu_DrawButton(button, buttons[i]))
             continue;
 
         switch (i)
@@ -86,8 +83,12 @@ void Title_Draw(void)
             quitRequested = true;
             break;
 
-        case BUTTON_LOAD_GAME:
         case BUTTON_SETTINGS:
+            Settings_Open();
+            gameState = GAME_STATE_MENU;
+            break;
+
+        case BUTTON_LOAD_GAME:
             break;
         }
     }

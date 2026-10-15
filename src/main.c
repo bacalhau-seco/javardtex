@@ -1,5 +1,6 @@
 #include "../include/defs.h"
 #include "../include/title.h"
+#include "../include/settings.h"
 #include "../include/bsp.h"
 #include "../include/render.h"
 #include "../include/collision.h"
@@ -212,6 +213,7 @@ int main(int argc, char **argv)
                 break;
 
             case GAME_STATE_MENU:
+                Settings_Draw();
                 break;
 
             case GAME_STATE_GAME:
