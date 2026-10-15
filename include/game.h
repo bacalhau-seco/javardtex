@@ -2,7 +2,7 @@
 #define GAME_H
 
 #define GAMENAME "demo"
-#define VERSION "0.0.1"
+#define VERSION "0.0.2"
 #define AUTHOR "bacalhau"
 
 #define FONT_UI_PATH "game/fonts/ui.ttf"
