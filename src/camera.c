@@ -1,6 +1,6 @@
 #include "../include/camera.h"
+#include "../include/settings.h"
 #include "../include/collision.h"
-#include "../include/defs.h"
 
 static inline Vector3 EyePosition(const Body *player)
 {
@@ -28,6 +28,7 @@ void Camera_Update(Camera *camera,
 
     Vector3 dir = Vector3RotateByAxisAngle(yaw, right, pitch);
 
+    camera->fovy = Settings_Fov();
     camera->up = up;
     camera->target = Vector3Add(camera->position, dir);
 }
@@ -36,7 +37,7 @@ void InitCamera(Camera *camera, const Body *player)
 {
     *camera = (Camera){0};
 
-    camera->fovy = Cvar_Get("fov")->value;
+    camera->fovy = Settings_Fov();
     camera->projection = CAMERA_PERSPECTIVE;
     camera->position = EyePosition(player);
 }

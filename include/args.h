@@ -1,6 +1,8 @@
 #ifndef ARGS_H
 #define ARGS_H
 
+#include <stdbool.h>
+
 #define ARGS_MAP_PATH_MAX 512
 
 typedef struct Args

@@ -189,7 +189,8 @@ static bool LoadMapLumps(FILE *file, const BSP_Lump *lumps, BSP_Map *map)
         && LoadArray(file, &lumps[BSP_LUMP_EDGES], sizeof(BSP_Edge), (void **)&map->edges, &map->num_edges)
         && LoadArray(file, &lumps[BSP_LUMP_SURFEDGES], sizeof(int32_t), (void **)&map->surfedges, &map->num_surfedges)
         && LoadArray(file, &lumps[BSP_LUMP_MODELS], sizeof(BSP_Model), (void **)&map->models, &map->num_models)
-        && LoadArray(file, &lumps[BSP_LUMP_LIGHTING], 1, (void **)&map->lighting, &map->lighting_size);
+        && LoadArray(file, &lumps[BSP_LUMP_LIGHTING], 1, (void **)&map->lighting, &map->lighting_size)
+        && LoadArray(file, &lumps[BSP_LUMP_VISIBILITY], 1, (void **)&map->visdata, &map->visdata_size);
 }
 
 bool BSP_Load(BSP_Map *map, const char *path)
@@ -240,6 +241,7 @@ void BSP_Free(BSP_Map *map)
     free(map->textures);
     free(map->entities);
     free(map->lighting);
+    free(map->visdata);
     free(map->planes);
     free(map->vertices);
     free(map->edges);
@@ -255,20 +257,101 @@ void BSP_Free(BSP_Map *map)
     memset(map, 0, sizeof(*map));
 }
 
-BSP_Texture *BSP_GetTexture(BSP_Map *map, int index)
+static inline float NodePlaneDistance(const BSP_Plane *plane, Vector3 p)
 {
-    if (!map || index < 0 || index >= map->num_textures)
-        return NULL;
-
-    return &map->textures[index];
+    return Vector3DotProduct(plane->normal, p) - plane->dist;
 }
+
+int BSP_FindLeaf(const BSP_Map *map, Vector3 quake_position)
+{
+    int num;
+
+    if (!map || map->num_models == 0 || !map->nodes || !map->planes)
+        return 0;
+
+    num = map->models[0].headnode[0];
+
+    while (num >= 0)
+    {
+        const BSP_Node *node;
+        const BSP_Plane *plane;
+
+        if (num >= map->num_nodes)
+            return 0;
+
+        node = &map->nodes[num];
+
+        if (node->planenum < 0 || node->planenum >= map->num_planes)
+            return 0;
+
+        plane = &map->planes[node->planenum];
+        num = node->children[NodePlaneDistance(plane, quake_position) < 0.0f ? 1 : 0];
+    }
+
+    return ~num;
+}
+
+bool BSP_DecompressVis(const BSP_Map *map, int leaf, uint8_t *out, int out_size)
+{
+    int32_t visofs;
+    int offset;
+    int written = 0;
+
+    if (!map || !out || out_size <= 0)
+        return false;
+
+    if (!map->visdata || map->visdata_size <= 0 || !map->leaves)
+        return false;
+
+    if (leaf <= 0 || leaf >= map->num_leaves)
+        return false;
+
+    visofs = map->leaves[leaf].visofs;
+
+    if (visofs < 0 || visofs >= map->visdata_size)
+        return false;
+
+    offset = visofs;
+
+    while (written < out_size)
+    {
+        uint8_t bits;
+
+        if (offset >= map->visdata_size)
+            return false;
+
+        bits = map->visdata[offset++];
+
+        if (bits != 0)
+        {
+            out[written++] = bits;
+            continue;
+        }
+
+        if (offset >= map->visdata_size)
+            return false;
+
+        {
+            int run = map->visdata[offset++];
+
+            while (run > 0 && written < out_size)
+            {
+                out[written++] = 0;
+                run--;
+            }
+        }
+    }
+
+    return true;
+}
+
 
 static bool GetSurfedgeVertex(const BSP_Map *map, int32_t surfedge, Vector3 *out)
 {
-    int32_t edge_index = surfedge < 0 ? -surfedge : surfedge;
+    int64_t edge_index = surfedge < 0 ? -(int64_t)surfedge : (int64_t)surfedge;
     uint16_t vertex_index;
 
-    if (edge_index >= map->num_edges)
+    if (edge_index >= (int64_t)map->num_edges)
         return false;
 
     vertex_index = map->edges[edge_index].v[surfedge < 0 ? 1 : 0];

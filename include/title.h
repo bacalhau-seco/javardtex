@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #include "raylib.h"
+#include "game.h"
 
 #define MENU_BUTTON_WIDTH_PCT 0.22f
 #define MENU_BUTTON_HEIGHT_PCT 0.055f

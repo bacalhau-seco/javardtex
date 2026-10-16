@@ -1,8 +1,9 @@
 #include <stddef.h>
 
-#include "../include/defs.h"
-#include "../include/title.h"
 #include "../include/settings.h"
+#include "../include/title.h"
+#include "../include/input.h"
+#include "../include/cvar.h"
 
 #define SETTINGS_LABEL_TEXT_PCT 0.024f
 #define SETTINGS_ROW_HEIGHT_PCT 0.045f
@@ -64,14 +65,76 @@ static SettingsAspect activeAspect = SETTINGS_ASPECT_16_9;
 static int visibleResolutions[SETTINGS_RESOLUTION_COUNT];
 static int visibleCount = 0;
 
+static int renderWidth = 1280;
+static int renderHeight = 960;
+static bool stretchScaling = false;
+static float fieldOfView = 90.0f;
+static float sensitivity = 0.001f;
+static int maxFps = 90;
+
+int Settings_NativeWidth(void)
+{
+    const int width = GetMonitorWidth(GetCurrentMonitor());
+
+    return width > 0 ? width : GetScreenWidth();
+}
+
+int Settings_NativeHeight(void)
+{
+    const int height = GetMonitorHeight(GetCurrentMonitor());
+
+    return height > 0 ? height : GetScreenHeight();
+}
+
+int Settings_RenderWidth(void)
+{
+    return renderWidth;
+}
+
+int Settings_RenderHeight(void)
+{
+    return renderHeight;
+}
+
+bool Settings_Stretch(void)
+{
+    return stretchScaling;
+}
+
+float Settings_Fov(void)
+{
+    return fieldOfView;
+}
+
+float Settings_Sensitivity(void)
+{
+    return sensitivity;
+}
+
+int Settings_MaxFps(void)
+{
+    return maxFps;
+}
+
+void Settings_Init(void)
+{
+    const int refresh = GetMonitorRefreshRate(GetCurrentMonitor());
+
+    renderWidth = Settings_NativeWidth();
+    renderHeight = Settings_NativeHeight();
+
+    if (refresh >= SETTINGS_FPS_MIN && refresh <= SETTINGS_FPS_MAX)
+        maxFps = refresh;
+}
+
 static inline int NativeWidth(void)
 {
-    return (int)Cvar_Value("nativehres", 1920.0f);
+    return Settings_NativeWidth();
 }
 
 static inline int NativeHeight(void)
 {
-    return (int)Cvar_Value("nativevres", 1080.0f);
+    return Settings_NativeHeight();
 }
 
 static void RebuildVisibleResolutions(void)
@@ -97,25 +160,99 @@ static void RebuildVisibleResolutions(void)
 
 static inline int RowsCount(void)
 {
-    return (activeTab == SETTINGS_TAB_CONTROLS) ? BIND_COUNT : visibleCount + 3;
+    return (activeTab == SETTINGS_TAB_CONTROLS) ? BIND_COUNT + 1 : visibleCount + 5;
+}
+
+static int DrawStepperRow(const char *label, const char *value, int centerX, int y)
+{
+    const float height = Menu_Height(SETTINGS_ROW_HEIGHT_PCT);
+    const float stepWidth = Menu_Height(SETTINGS_ROW_HEIGHT_PCT) * 1.6f;
+    const float valueWidth = Menu_Width(SETTINGS_KEY_WIDTH_PCT);
+    const float spacing = Menu_Width(MENU_MARGIN_PCT);
+    const float startX = centerX + spacing;
+
+    const Rectangle minus = { startX, y, stepWidth, height };
+    const Rectangle valueBox = { startX + stepWidth + spacing, y, valueWidth, height };
+    const Rectangle plus = { startX + stepWidth + valueWidth + spacing * 2.0f, y, stepWidth, height };
+
+    int delta = 0;
+
+    Menu_DrawText(
+        Fonts_Get(FONT_UI),
+        label,
+        centerX - (int)(Menu_Width(SETTINGS_LABEL_WIDTH_PCT) / 2.0f),
+        y + (int)((height - Menu_Height(SETTINGS_LABEL_TEXT_PCT)) / 2.0f),
+        Menu_Height(SETTINGS_LABEL_TEXT_PCT),
+        BLACK
+    );
+
+    if (Menu_DrawButton(minus, "-"))
+        delta--;
+
+    Menu_DrawButton(valueBox, value);
+
+    if (Menu_DrawButton(plus, "+"))
+        delta++;
+
+    return delta;
+}
+
+static float ClampFloatRange(float value, float min, float max)
+{
+    if (value < min)
+        return min;
+
+    return value > max ? max : value;
+}
+
+static void DrawFovRow(int centerX, int y)
+{
+    const int delta = DrawStepperRow("FOV", TextFormat("%d", (int)(fieldOfView + 0.5f)), centerX, y);
+
+    if (delta != 0)
+        fieldOfView = ClampFloatRange(fieldOfView + delta * SETTINGS_FOV_STEP, SETTINGS_FOV_MIN, SETTINGS_FOV_MAX);
+}
+
+static void DrawFpsRow(int centerX, int y)
+{
+    const int delta = DrawStepperRow("MAX FPS", TextFormat("%d", maxFps), centerX, y);
+
+    if (delta == 0)
+        return;
+
+    maxFps += delta * SETTINGS_FPS_STEP;
+
+    if (maxFps < SETTINGS_FPS_MIN)
+        maxFps = SETTINGS_FPS_MIN;
+
+    if (maxFps > SETTINGS_FPS_MAX)
+        maxFps = SETTINGS_FPS_MAX;
+}
+
+static void DrawSensitivityRow(int centerX, int y)
+{
+    const int delta = DrawStepperRow("SENSITIVITY", TextFormat("%.1f", sensitivity * 1000.0f), centerX, y);
+
+    if (delta != 0)
+        sensitivity = ClampFloatRange(
+            sensitivity + delta * SETTINGS_SENSITIVITY_STEP,
+            SETTINGS_SENSITIVITY_MIN,
+            SETTINGS_SENSITIVITY_MAX
+        );
 }
 
 static void ApplyResolution(int width, int height)
 {
-    Cvar *hres = Cvar_Get("hres");
-    Cvar *vres = Cvar_Get("vres");
-
-    if (hres == NULL || vres == NULL || width <= 0 || height <= 0)
+    if (width <= 0 || height <= 0)
         return;
 
-    hres->value = (float)width;
-    vres->value = (float)height;
+    renderWidth = width;
+    renderHeight = height;
 }
 
 static bool IsCurrentResolution(int width, int height)
 {
-    return (int)Cvar_Value("hres", 0.0f) == width
-        && (int)Cvar_Value("vres", 0.0f) == height;
+    return renderWidth == width && renderHeight == height;
 }
 
 static void DrawResolutionRow(int index, int centerX, int y)
@@ -162,8 +299,6 @@ static void DrawNativeRow(int centerX, int y)
 
 static void DrawScalingRow(int centerX, int y)
 {
-    Cvar *stretch = Cvar_Get("stretch");
-
     const Rectangle button = {
         centerX - Menu_Width(MENU_BUTTON_WIDTH_PCT) / 2.0f,
         y,
@@ -171,13 +306,12 @@ static void DrawScalingRow(int centerX, int y)
         Menu_Height(SETTINGS_ROW_HEIGHT_PCT)
     };
 
-    const bool stretched = (stretch != NULL && stretch->value != 0.0f);
+    const bool stretched = stretchScaling;
 
     if (!Menu_DrawButton(button, stretched ? "SCALING: STRETCH" : "SCALING: BORDERS"))
         return;
 
-    if (stretch != NULL)
-        stretch->value = stretched ? 0.0f : 1.0f;
+    stretchScaling = !stretched;
 }
 
 static void DrawAspectRow(int centerX, int y)
@@ -372,8 +506,10 @@ void Settings_Draw(void)
 
     if (activeTab == SETTINGS_TAB_CONTROLS)
     {
-        for (i = 0; i < rows; i++)
+        for (i = 0; i < BIND_COUNT; i++)
             DrawBindRow(i, centerX, (int)(top + i * rowStep));
+
+        DrawSensitivityRow(centerX, (int)(top + BIND_COUNT * rowStep));
     }
     else
     {
@@ -384,6 +520,8 @@ void Settings_Draw(void)
 
         DrawNativeRow(centerX, (int)(top + (visibleCount + 1) * rowStep));
         DrawScalingRow(centerX, (int)(top + (visibleCount + 2) * rowStep));
+        DrawFovRow(centerX, (int)(top + (visibleCount + 3) * rowStep));
+        DrawFpsRow(centerX, (int)(top + (visibleCount + 4) * rowStep));
     }
 
     if (!Menu_DrawButton(backButton, "BACK"))

@@ -70,18 +70,10 @@ float Cvar_Value(const char *name, float fallback)
     return cvar ? cvar->value : fallback;
 }
 
+
 void Cvar_Init(void)
 {
-    Cvar_Register("fov", 90.0f);
-    Cvar_Register("mouseh", 0.001f);
-    Cvar_Register("mousev", 0.001f);
-    Cvar_Register("maxfps", 90);
     Cvar_Register("tickrate", 128.0f);
-    Cvar_Register("hres", 1280);
-    Cvar_Register("vres", 960);
-    Cvar_Register("nativehres", 1920);
-    Cvar_Register("nativevres", 1080);
-    Cvar_Register("stretch", 0.0f);
 
     Cvar_Register("gravity", 800.0f);
     Cvar_Register("maxspeed", 290.0f);
@@ -94,8 +86,8 @@ void Cvar_Init(void)
     Cvar_Register("airaccel", 100.0f);
     Cvar_Register("airwishcap", 30.0f);
     Cvar_Register("jumppenalty", 0.0f);
-    Cvar_Register("movestep", 1.0f);
-    Cvar_Register("groundcheck", 2.0f);
     Cvar_Register("stepheight", 16.0f);
     Cvar_Register("stepsmooth", 150.0f);
+    Cvar_Register("slopegrip", 0.7f);
+    Cvar_Register("slopeslide", 0.5f);
 }

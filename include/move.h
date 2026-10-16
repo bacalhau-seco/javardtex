@@ -3,6 +3,7 @@
 #include <stdbool.h>
 
 #include "raylib.h"
+#include "raymath.h"
 #include "bsp.h"
 
 typedef struct {
@@ -10,6 +11,7 @@ typedef struct {
     Vector3 velocity;
     Vector3 dir;
     bool isGrounded;
+    float traction;
     bool isCrouched;
     float crouchFeetOffset;
     float stepViewOffset;

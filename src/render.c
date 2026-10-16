@@ -178,12 +178,8 @@ static void AppendVertex(BSP_Batch *batch, const FaceContext *context, const Vec
 static void AppendTriangle(BSP_Batch *batch, const FaceContext *context, const Vector3 *a, const Vector3 *b, const Vector3 *c)
 {
     AppendVertex(batch, context, a);
-    AppendVertex(batch, context, b);
-    AppendVertex(batch, context, c);
-
     AppendVertex(batch, context, c);
     AppendVertex(batch, context, b);
-    AppendVertex(batch, context, a);
 }
 
 static FaceContext MakeFaceContext(const BSP_Renderer *renderer, const BSP_Map *map, int index, int *miptex)
@@ -215,6 +211,26 @@ static bool IsFaceDrawable(const BSP_Renderer *renderer, const BSP_Map *map, int
     return renderer->batches[miptex].texture_id != 0;
 }
 
+static bool GrowBatchFaces(BSP_Batch *batch)
+{
+    int capacity;
+    int *grown;
+
+    if (batch->face_count < batch->face_capacity)
+        return true;
+
+    capacity = batch->face_capacity == 0 ? 64 : batch->face_capacity * 2;
+    grown = realloc(batch->faces, sizeof(int) * (size_t)capacity);
+
+    if (!grown)
+        return false;
+
+    batch->faces = grown;
+    batch->face_capacity = capacity;
+
+    return true;
+}
+
 static void AddFace(BSP_Renderer *renderer, const BSP_Map *map, int index)
 {
     const BSP_Face *face = &map->faces[index];
@@ -223,6 +239,7 @@ static void AddFace(BSP_Renderer *renderer, const BSP_Map *map, int index)
     Vector3 *vertices;
     int miptex;
     int count;
+    int first;
     int i;
 
     if (!IsFaceDrawable(renderer, map, index))
@@ -237,11 +254,22 @@ static void AddFace(BSP_Renderer *renderer, const BSP_Map *map, int index)
         return;
 
     count = BSP_GetFaceVertices(map, face, vertices);
+    first = batch->count;
 
     for (i = 1; i + 1 < count; i++)
         AppendTriangle(batch, &context, &vertices[0], &vertices[i], &vertices[i + 1]);
 
     free(vertices);
+
+    if (batch->count == first)
+        return;
+
+    if (!GrowBatchFaces(batch))
+        return;
+
+    renderer->face_first[index] = first;
+    renderer->face_count[index] = batch->count - first;
+    batch->faces[batch->face_count++] = index;
 }
 
 static bool GrowSky(BSP_Sky *sky)
@@ -297,12 +325,8 @@ static void AddSkyFace(BSP_Sky *sky, const BSP_Map *map, const BSP_Face *face)
     for (i = 1; i + 1 < count; i++)
     {
         AppendSkyVertex(sky, &vertices[0]);
-        AppendSkyVertex(sky, &vertices[i]);
-        AppendSkyVertex(sky, &vertices[i + 1]);
-
         AppendSkyVertex(sky, &vertices[i + 1]);
         AppendSkyVertex(sky, &vertices[i]);
-        AppendSkyVertex(sky, &vertices[0]);
     }
 
     free(vertices);
@@ -500,16 +524,6 @@ static bool LoadLightmapShader(BSP_Renderer *renderer)
     return true;
 }
 
-static void DrawBatch(const BSP_Batch *batch)
-{
-    if (batch->vao == 0)
-        return;
-
-    rlEnableTexture(batch->texture_id);
-    rlEnableVertexArray(batch->vao);
-    rlDrawVertexArray(0, batch->count);
-    rlDisableVertexArray();
-}
 
 static void BindLightmapTexture(const BSP_Renderer *renderer)
 {
@@ -530,6 +544,26 @@ bool BSP_RendererInit(BSP_Renderer *renderer, const BSP_Map *map)
     memset(renderer, 0, sizeof(*renderer));
 
     if (!BSP_LightmapInit(&renderer->lightmap, map) || !LoadLightmapShader(renderer))
+    {
+        BSP_RendererShutdown(renderer);
+        return false;
+    }
+
+    renderer->num_faces = map->num_faces;
+    renderer->leaf_vis_size = (map->num_leaves + 7) / 8;
+
+    if (map->num_faces > 0)
+    {
+        renderer->face_first = calloc((size_t)map->num_faces, sizeof(int));
+        renderer->face_count = calloc((size_t)map->num_faces, sizeof(int));
+        renderer->face_visible = calloc((size_t)map->num_faces, sizeof(uint8_t));
+    }
+
+    if (renderer->leaf_vis_size > 0)
+        renderer->leaf_vis = calloc((size_t)renderer->leaf_vis_size, sizeof(uint8_t));
+
+    if ((map->num_faces > 0 && (!renderer->face_first || !renderer->face_count || !renderer->face_visible))
+        || (renderer->leaf_vis_size > 0 && !renderer->leaf_vis))
     {
         BSP_RendererShutdown(renderer);
         return false;
@@ -582,9 +616,14 @@ void BSP_RendererShutdown(BSP_Renderer *renderer)
             rlUnloadVertexArray(batch->vao);
 
         free(batch->vertices);
+        free(batch->faces);
     }
 
     free(renderer->batches);
+    free(renderer->face_first);
+    free(renderer->face_count);
+    free(renderer->face_visible);
+    free(renderer->leaf_vis);
 
     if (renderer->sky.vbo)
         rlUnloadVertexBuffer(renderer->sky.vbo);
@@ -604,16 +643,194 @@ void BSP_RendererShutdown(BSP_Renderer *renderer)
     memset(renderer, 0, sizeof(*renderer));
 }
 
-void BSP_Render(const BSP_Renderer *renderer)
+typedef struct {
+    Vector3 normal;
+    float distance;
+} RenderPlane;
+
+static RenderPlane MakePlane(Vector3 normal, Vector3 point)
+{
+    RenderPlane plane;
+
+    plane.normal = Vector3Normalize(normal);
+    plane.distance = -Vector3DotProduct(plane.normal, point);
+
+    return plane;
+}
+
+static void BuildFrustum(Camera camera, float aspect, RenderPlane planes[6])
+{
+    const float far = 8192.0f;
+    const float near = 0.1f;
+
+    Vector3 forward = Vector3Normalize(Vector3Subtract(camera.target, camera.position));
+    Vector3 right = Vector3Normalize(Vector3CrossProduct(forward, camera.up));
+    Vector3 up = Vector3CrossProduct(right, forward);
+
+    float halfHeight = tanf(camera.fovy * 0.5f * DEG2RAD) * far;
+    float halfWidth = halfHeight * aspect;
+
+    Vector3 farCenter = Vector3Add(camera.position, Vector3Scale(forward, far));
+    Vector3 farTop = Vector3Scale(up, halfHeight);
+    Vector3 farRight = Vector3Scale(right, halfWidth);
+
+    Vector3 toTop = Vector3Add(Vector3Scale(forward, far), farTop);
+    Vector3 toBottom = Vector3Subtract(Vector3Scale(forward, far), farTop);
+    Vector3 toRight = Vector3Add(Vector3Scale(forward, far), farRight);
+    Vector3 toLeft = Vector3Subtract(Vector3Scale(forward, far), farRight);
+
+    planes[0] = MakePlane(forward, Vector3Add(camera.position, Vector3Scale(forward, near)));
+    planes[1] = MakePlane(Vector3Negate(forward), farCenter);
+    planes[2] = MakePlane(Vector3CrossProduct(toLeft, up), camera.position);
+    planes[3] = MakePlane(Vector3CrossProduct(up, toRight), camera.position);
+    planes[4] = MakePlane(Vector3CrossProduct(toTop, right), camera.position);
+    planes[5] = MakePlane(Vector3CrossProduct(right, toBottom), camera.position);
+}
+
+static bool BoxVisible(const RenderPlane planes[6], Vector3 mins, Vector3 maxs)
+{
+    int i;
+
+    for (i = 0; i < 6; i++)
+    {
+        Vector3 positive = {
+            planes[i].normal.x >= 0.0f ? maxs.x : mins.x,
+            planes[i].normal.y >= 0.0f ? maxs.y : mins.y,
+            planes[i].normal.z >= 0.0f ? maxs.z : mins.z
+        };
+
+        if (Vector3DotProduct(planes[i].normal, positive) + planes[i].distance < 0.0f)
+            return false;
+    }
+
+    return true;
+}
+
+static void LeafBounds(const BSP_Leaf *leaf, Vector3 *mins, Vector3 *maxs)
+{
+    mins->x = (float)leaf->mins[0];
+    maxs->x = (float)leaf->maxs[0];
+    mins->y = (float)leaf->mins[2];
+    maxs->y = (float)leaf->maxs[2];
+    mins->z = -(float)leaf->maxs[1];
+    maxs->z = -(float)leaf->mins[1];
+}
+
+static void MarkLeafFaces(BSP_Renderer *renderer, const BSP_Map *map, const BSP_Leaf *leaf)
+{
+    int i;
+
+    for (i = 0; i < leaf->nummarksurfaces; i++)
+    {
+        int mark = leaf->firstmarksurface + i;
+        int face;
+
+        if (mark < 0 || mark >= map->num_marksurfaces)
+            continue;
+
+        face = map->marksurfaces[mark];
+
+        if (face >= 0 && face < renderer->num_faces)
+            renderer->face_visible[face] = 1;
+    }
+}
+
+static void MarkVisibleFaces(BSP_Renderer *renderer, const BSP_Map *map, Camera camera, float aspect)
+{
+    RenderPlane planes[6];
+    Vector3 quakeEye = { camera.position.x, -camera.position.z, camera.position.y };
+    int viewLeaf = BSP_FindLeaf(map, quakeEye);
+    bool hasVis = BSP_DecompressVis(map, viewLeaf, renderer->leaf_vis, renderer->leaf_vis_size);
+    int i;
+
+    memset(renderer->face_visible, 0, (size_t)renderer->num_faces);
+    BuildFrustum(camera, aspect, planes);
+
+    for (i = 1; i < map->num_leaves; i++)
+    {
+        const BSP_Leaf *leaf = &map->leaves[i];
+        Vector3 mins;
+        Vector3 maxs;
+
+        if (leaf->contents == BSP_CONTENTS_SOLID || leaf->nummarksurfaces == 0)
+            continue;
+
+        if (hasVis && !(renderer->leaf_vis[(i - 1) >> 3] & (1 << ((i - 1) & 7))))
+            continue;
+
+        LeafBounds(leaf, &mins, &maxs);
+
+        if (!BoxVisible(planes, mins, maxs))
+            continue;
+
+        MarkLeafFaces(renderer, map, leaf);
+    }
+}
+
+static void DrawVisibleBatch(BSP_Renderer *renderer, const BSP_Batch *batch)
+{
+    int runFirst = -1;
+    int runCount = 0;
+    int i;
+
+    if (batch->vao == 0 || batch->face_count == 0)
+        return;
+
+    rlEnableTexture(batch->texture_id);
+    rlEnableVertexArray(batch->vao);
+
+    for (i = 0; i < batch->face_count; i++)
+    {
+        const int face = batch->faces[i];
+        const int first = renderer->face_first[face];
+        const int count = renderer->face_count[face];
+
+        if (!renderer->face_visible[face])
+            continue;
+
+        renderer->drawn_faces++;
+
+        if (runFirst >= 0 && first == runFirst + runCount)
+        {
+            runCount += count;
+            continue;
+        }
+
+        if (runFirst >= 0)
+        {
+            rlDrawVertexArray(runFirst, runCount);
+            renderer->draw_calls++;
+        }
+
+        runFirst = first;
+        runCount = count;
+    }
+
+    if (runFirst >= 0)
+    {
+        rlDrawVertexArray(runFirst, runCount);
+        renderer->draw_calls++;
+    }
+
+    rlDisableVertexArray();
+}
+
+void BSP_Render(BSP_Renderer *renderer, const BSP_Map *map, Camera camera, float aspect)
 {
     Matrix mvp;
     int i;
 
-    if (!renderer || renderer->shader.id == 0)
+    if (!renderer || !map || renderer->shader.id == 0)
         return;
 
+    renderer->drawn_faces = 0;
+    renderer->draw_calls = 0;
+
+    if (renderer->face_visible && renderer->num_faces > 0)
+        MarkVisibleFaces(renderer, map, camera, aspect);
+
     rlDrawRenderBatchActive();
-    rlDisableBackfaceCulling();
+    rlEnableBackfaceCulling();
 
     BeginShaderMode(renderer->shader);
 
@@ -622,11 +839,10 @@ void BSP_Render(const BSP_Renderer *renderer)
     BindLightmapTexture(renderer);
 
     for (i = 0; i < renderer->num_batches; i++)
-        DrawBatch(&renderer->batches[i]);
+        DrawVisibleBatch(renderer, &renderer->batches[i]);
 
     rlSetTexture(0);
     EndShaderMode();
-    rlEnableBackfaceCulling();
 }
 
 void BSP_RenderSky(const BSP_Renderer *renderer, Vector3 cameraPosition, float time)
@@ -641,7 +857,7 @@ void BSP_RenderSky(const BSP_Renderer *renderer, Vector3 cameraPosition, float t
         return;
 
     rlDrawRenderBatchActive();
-    rlDisableBackfaceCulling();
+    rlEnableBackfaceCulling();
 
     BeginShaderMode(renderer->sky.shader);
 

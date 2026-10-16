@@ -1,4 +1,8 @@
-#include "../include/defs.h"
+#include "../include/game.h"
+#include "../include/move.h"
+#include "../include/input.h"
+#include "../include/camera.h"
+#include "../include/cvar.h"
 #include "../include/title.h"
 #include "../include/settings.h"
 #include "../include/bsp.h"
@@ -29,10 +33,21 @@ static bool jumpPending = false;
 #define TICK_RATE_MAX 1000.0f
 #define TICK_MAX_STEPS 8
 
+static void UpdateTargetFps(void)
+{
+    static int appliedFps = 0;
+
+    if (appliedFps == Settings_MaxFps())
+        return;
+
+    appliedFps = Settings_MaxFps();
+    SetTargetFPS(appliedFps);
+}
+
 static void UpdateScreenTarget(void)
 {
-    const int width = (int)Cvar_Value("hres", 1280.0f);
-    const int height = (int)Cvar_Value("vres", 960.0f);
+    const int width = Settings_RenderWidth();
+    const int height = Settings_RenderHeight();
 
     if (width <= 0 || height <= 0)
         return;
@@ -64,7 +79,7 @@ static Rectangle ScreenTargetDestination(void)
     if (targetWidth <= 0 || targetHeight <= 0)
         return (Rectangle){ 0.0f, 0.0f, windowWidth, windowHeight };
 
-    if (Cvar_Value("stretch", 0.0f) != 0.0f)
+    if (Settings_Stretch())
         return (Rectangle){ 0.0f, 0.0f, windowWidth, windowHeight };
 
     scale = fminf(windowWidth / (float)targetWidth, windowHeight / (float)targetHeight);
@@ -167,28 +182,16 @@ int main(int argc, char **argv)
     Cvar_Init();
 
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-    InitWindow((int)Cvar_Get("hres")->value, (int)Cvar_Get("vres")->value, "javardtex");
-    SetTargetFPS((int)Cvar_Get("maxfps")->value);
+    InitWindow(1280, 960, "javardtex");
     SetExitKey(KEY_NULL);
 
-    {
-        const int monitor = GetCurrentMonitor();
-        const int nativeWidth = GetMonitorWidth(monitor);
-        const int nativeHeight = GetMonitorHeight(monitor);
+    Settings_Init();
+    SetTargetFPS(Settings_MaxFps());
 
-        if (nativeWidth > 0 && nativeHeight > 0)
-        {
-            Cvar_Get("nativehres")->value = (float)nativeWidth;
-            Cvar_Get("nativevres")->value = (float)nativeHeight;
-            Cvar_Get("hres")->value = (float)nativeWidth;
-            Cvar_Get("vres")->value = (float)nativeHeight;
+    SetWindowSize(Settings_NativeWidth(), Settings_NativeHeight());
 
-            SetWindowSize(nativeWidth, nativeHeight);
-        }
-
-        if (!IsWindowFullscreen())
-            ToggleFullscreen();
-    }
+    if (!IsWindowFullscreen())
+        ToggleFullscreen();
 
     Fonts_Load();
 
@@ -206,6 +209,7 @@ int main(int argc, char **argv)
 
     while (!WindowShouldClose() && !quitRequested)
     {
+        UpdateTargetFps();
         UpdateScreenTarget();
 
         {
@@ -283,8 +287,8 @@ int main(int argc, char **argv)
             if (mouseScale.y != 0.0f)
                 in.mouse.y /= mouseScale.y;
 
-            lookRotation.x -= in.mouse.x * Cvar_Get("mouseh")->value;
-            lookRotation.y += in.mouse.y * Cvar_Get("mousev")->value;
+            lookRotation.x -= in.mouse.x * Settings_Sensitivity();
+            lookRotation.y += in.mouse.y * Settings_Sensitivity();
             lookRotation.y = Clamp(lookRotation.y, -PI/2+0.001f, PI/2-0.001f);
 
             if (in.jump)
@@ -347,7 +351,7 @@ int main(int argc, char **argv)
                 {
                     BeginMode3D(camera);
                         BSP_RenderSky(&bspRenderer, camera.position, (float)GetTime());
-                        BSP_Render(&bspRenderer);
+                        BSP_Render(&bspRenderer, &bsp, camera, (float)targetWidth / (float)targetHeight);
                     EndMode3D();
                 }
 
@@ -363,7 +367,7 @@ int main(int argc, char **argv)
                 {
                     BeginMode3D(camera);
                         BSP_RenderSky(&bspRenderer, camera.position, (float)GetTime());
-                        BSP_Render(&bspRenderer);
+                        BSP_Render(&bspRenderer, &bsp, camera, (float)targetWidth / (float)targetHeight);
                     EndMode3D();
                 }
                 break;

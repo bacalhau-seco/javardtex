@@ -1,4 +1,3 @@
-#include "../include/defs.h"
 #include "../include/title.h"
 #include "../include/settings.h"
 

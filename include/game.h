@@ -1,6 +1,10 @@
 #ifndef GAME_H
 #define GAME_H
 
+#include <stdbool.h>
+
+#include "raylib.h"
+
 #define GAMENAME "demo"
 #define VERSION "0.0.2"
 #define AUTHOR "bacalhau"

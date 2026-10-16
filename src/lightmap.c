@@ -78,19 +78,19 @@ static bool ComputeExtents(const BSP_Map *map, const BSP_Face *face, LightmapExt
     return true;
 }
 
-static bool PackRect(Packer *packer, int width, int height, int *out_x, int *out_y)
+static bool PackRect(Packer *packer, int size, int width, int height, int *out_x, int *out_y)
 {
-    if (width > LIGHTMAP_SIZE || height > LIGHTMAP_SIZE)
+    if (width > size || height > size)
         return false;
 
-    if (packer->x + width + LIGHTMAP_PADDING > LIGHTMAP_SIZE)
+    if (packer->x + width + LIGHTMAP_PADDING > size)
     {
         packer->x = 0;
         packer->y += packer->shelf + LIGHTMAP_PADDING;
         packer->shelf = 0;
     }
 
-    if (packer->y + height + LIGHTMAP_PADDING > LIGHTMAP_SIZE)
+    if (packer->y + height + LIGHTMAP_PADDING > size)
         return false;
 
     *out_x = packer->x;
@@ -104,7 +104,7 @@ static bool PackRect(Packer *packer, int width, int height, int *out_x, int *out
     return true;
 }
 
-static bool CopySamples(const BSP_Map *map, const BSP_Face *face, const BSP_FaceLightmap *placed, Color *pixels)
+static bool CopySamples(const BSP_Map *map, const BSP_Face *face, const BSP_FaceLightmap *placed, Color *pixels, int size)
 {
     size_t base = (size_t)face->lightofs;
     size_t samples = (size_t)placed->width * (size_t)placed->height;
@@ -119,7 +119,7 @@ static bool CopySamples(const BSP_Map *map, const BSP_Face *face, const BSP_Face
         for (x = 0; x < placed->width; x++)
         {
             const uint8_t *src = map->lighting + base + ((size_t)y * placed->width + x) * LIGHTMAP_CHANNELS;
-            Color *dst = &pixels[(placed->y + y) * LIGHTMAP_SIZE + placed->x + x];
+            Color *dst = &pixels[(placed->y + y) * size + placed->x + x];
 
             dst->r = src[0];
             dst->g = src[1];
@@ -131,24 +131,28 @@ static bool CopySamples(const BSP_Map *map, const BSP_Face *face, const BSP_Face
     return true;
 }
 
-bool BSP_LightmapInit(BSP_Lightmap *lightmap, const BSP_Map *map)
+static bool BuildAtlas(BSP_Lightmap *lightmap, const BSP_Map *map, int size, int *overflow)
 {
     Image atlas;
     Texture2D texture;
     Packer packer = { 0, 1, 0 };
     int i;
 
-    if (!lightmap || !map)
-        return false;
-
-    memset(lightmap, 0, sizeof(*lightmap));
+    *overflow = 0;
 
     lightmap->faces = calloc(map->num_faces > 0 ? (size_t)map->num_faces : 1, sizeof(BSP_FaceLightmap));
 
     if (!lightmap->faces)
         return false;
 
-    atlas = GenImageColor(LIGHTMAP_SIZE, LIGHTMAP_SIZE, BLACK);
+    atlas = GenImageColor(size, size, BLACK);
+
+    if (!atlas.data)
+    {
+        free(lightmap->faces);
+        memset(lightmap, 0, sizeof(*lightmap));
+        return false;
+    }
 
     for (i = 0; i < map->num_faces; i++)
     {
@@ -159,9 +163,9 @@ bool BSP_LightmapInit(BSP_Lightmap *lightmap, const BSP_Map *map)
         if (face->styles[0] == 255 || face->lightofs < 0 || !ComputeExtents(map, face, &extents))
             continue;
 
-        if (!PackRect(&packer, extents.width, extents.height, &placed->x, &placed->y))
+        if (!PackRect(&packer, size, extents.width, extents.height, &placed->x, &placed->y))
         {
-            TraceLog(LOG_WARNING, "Lightmap atlas full, face %d rendered unlit", i);
+            (*overflow)++;
             continue;
         }
 
@@ -169,8 +173,17 @@ bool BSP_LightmapInit(BSP_Lightmap *lightmap, const BSP_Map *map)
         placed->min_t = extents.min_t;
         placed->width = extents.width;
         placed->height = extents.height;
+        placed->atlas_size = size;
 
-        placed->valid = CopySamples(map, face, placed, atlas.data);
+        placed->valid = CopySamples(map, face, placed, atlas.data, size);
+    }
+
+    if (*overflow > 0)
+    {
+        UnloadImage(atlas);
+        free(lightmap->faces);
+        memset(lightmap, 0, sizeof(*lightmap));
+        return false;
     }
 
     texture = LoadTextureFromImage(atlas);
@@ -185,8 +198,34 @@ bool BSP_LightmapInit(BSP_Lightmap *lightmap, const BSP_Map *map)
 
     SetTextureFilter(texture, TEXTURE_FILTER_BILINEAR);
     lightmap->texture_id = texture.id;
+    lightmap->size = size;
 
     return true;
+}
+
+bool BSP_LightmapInit(BSP_Lightmap *lightmap, const BSP_Map *map)
+{
+    int size;
+
+    if (!lightmap || !map)
+        return false;
+
+    memset(lightmap, 0, sizeof(*lightmap));
+
+    for (size = LIGHTMAP_SIZE_MIN; size <= LIGHTMAP_SIZE_MAX; size *= 2)
+    {
+        int overflow = 0;
+
+        if (BuildAtlas(lightmap, map, size, &overflow))
+            return true;
+
+        if (overflow == 0)
+            return false;
+
+        TraceLog(LOG_INFO, "Lightmap atlas %dx%d too small (%d faces), growing", size, size, overflow);
+    }
+
+    return false;
 }
 
 void BSP_LightmapShutdown(BSP_Lightmap *lightmap)
@@ -203,10 +242,10 @@ void BSP_LightmapShutdown(BSP_Lightmap *lightmap)
 
 void BSP_LightmapUV(const BSP_FaceLightmap *face, float s, float t, float *u, float *v)
 {
-    if (!face->valid)
+    if (!face->valid || face->atlas_size <= 0)
     {
-        *u = 0.5f / LIGHTMAP_SIZE;
-        *v = 0.5f / LIGHTMAP_SIZE;
+        *u = 0.5f / LIGHTMAP_SIZE_MIN;
+        *v = 0.5f / LIGHTMAP_SIZE_MIN;
         return;
     }
 
@@ -225,6 +264,6 @@ void BSP_LightmapUV(const BSP_FaceLightmap *face, float s, float t, float *u, fl
     if (ly > (float)face->height - 1.0f)
         ly = (float)face->height - 1.0f;
 
-    *u = ((float)face->x + lx + 0.5f) / LIGHTMAP_SIZE;
-    *v = ((float)face->y + ly + 0.5f) / LIGHTMAP_SIZE;
+    *u = ((float)face->x + lx + 0.5f) / (float)face->atlas_size;
+    *v = ((float)face->y + ly + 0.5f) / (float)face->atlas_size;
 }

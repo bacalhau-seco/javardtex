@@ -1,4 +1,4 @@
-#include "../include/defs.h"
+#include "../include/game.h"
 
 bool newGameRequested = false;
 bool quitRequested = false;

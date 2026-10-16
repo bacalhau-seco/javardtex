@@ -26,6 +26,9 @@ typedef struct {
     BSP_RenderVertex *vertices;
     int count;
     int capacity;
+    int *faces;
+    int face_count;
+    int face_capacity;
 } BSP_Batch;
 
 typedef struct {
@@ -55,11 +58,19 @@ typedef struct {
     BSP_Batch *batches;
     int num_batches;
     BSP_Sky sky;
+    int *face_first;
+    int *face_count;
+    uint8_t *face_visible;
+    uint8_t *leaf_vis;
+    int leaf_vis_size;
+    int num_faces;
+    int drawn_faces;
+    int draw_calls;
 } BSP_Renderer;
 
 bool BSP_RendererInit(BSP_Renderer *renderer, const BSP_Map *map);
 void BSP_RendererShutdown(BSP_Renderer *renderer);
-void BSP_Render(const BSP_Renderer *renderer);
+void BSP_Render(BSP_Renderer *renderer, const BSP_Map *map, Camera camera, float aspect);
 void BSP_RenderSky(const BSP_Renderer *renderer, Vector3 cameraPosition, float time);
 
 #endif

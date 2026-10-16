@@ -114,6 +114,9 @@ typedef struct {
     uint8_t *lighting;
     int lighting_size;
 
+    uint8_t *visdata;
+    int visdata_size;
+
     BSP_Plane *planes;
     int num_planes;
 
@@ -151,10 +154,21 @@ typedef struct {
     int num_textures;
 } BSP_Map;
 
+typedef char BSP_LayoutAssert[
+    (sizeof(BSP_Lump) == 8
+     && sizeof(BSP_Plane) == 20
+     && sizeof(BSP_Edge) == 4
+     && sizeof(BSP_Node) == 24
+     && sizeof(BSP_TexInfo) == 40
+     && sizeof(BSP_Face) == 20
+     && sizeof(BSP_ClipNode) == 8
+     && sizeof(BSP_Leaf) == 28
+     && sizeof(BSP_Model) == 64
+     && sizeof(Vector3) == 12) ? 1 : -1];
+
 bool BSP_Load(BSP_Map *map, const char *path);
 void BSP_Free(BSP_Map *map);
 
-BSP_Texture *BSP_GetTexture(BSP_Map *map, int index);
 
 int BSP_GetFaceVertices(const BSP_Map *map, const BSP_Face *face, Vector3 *out);
 
@@ -171,6 +185,8 @@ bool BSP_GetPlayerStart(const BSP_Map *map, float *x, float *y, float *z);
 bool BSP_GetPlayerStartAngle(const BSP_Map *map, float *angle);
 bool BSP_GetNextLevel(const BSP_Map *map, BSP_NextLevel *out);
 bool BSP_GetSunlightColor(const BSP_Map *map, unsigned char *r, unsigned char *g, unsigned char *b);
+int BSP_FindLeaf(const BSP_Map *map, Vector3 quake_position);
+bool BSP_DecompressVis(const BSP_Map *map, int leaf, uint8_t *out, int out_size);
 
 typedef struct {
     float top[3];

@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#include "../include/defs.h"
+#include "../include/input.h"
 
 typedef struct {
     const char *label;
@@ -128,9 +128,17 @@ int Input_PollBindKey(void)
     return GetKeyPressed();
 }
 
+#define INPUT_NAME_BUFFERS 4
+#define INPUT_NAME_SIZE 16
+
 const char *Input_KeyName(int key)
 {
-    static char name[16];
+    static char names[INPUT_NAME_BUFFERS][INPUT_NAME_SIZE];
+    static int next = 0;
+
+    char *name = names[next];
+
+    next = (next + 1) % INPUT_NAME_BUFFERS;
 
     if (key == KEY_NULL)
         return "---";
@@ -151,14 +159,14 @@ const char *Input_KeyName(int key)
 
     if (key >= KEY_F1 && key <= KEY_F12)
     {
-        snprintf(name, sizeof(name), "F%d", key - KEY_F1 + 1);
+        snprintf(name, INPUT_NAME_SIZE, "F%d", key - KEY_F1 + 1);
 
         return name;
     }
 
     if (key >= KEY_KP_0 && key <= KEY_KP_9)
     {
-        snprintf(name, sizeof(name), "KP %d", key - KEY_KP_0);
+        snprintf(name, INPUT_NAME_SIZE, "KP %d", key - KEY_KP_0);
 
         return name;
     }
@@ -199,7 +207,7 @@ const char *Input_KeyName(int key)
     default: break;
     }
 
-    snprintf(name, sizeof(name), "KEY %d", key);
+    snprintf(name, INPUT_NAME_SIZE, "KEY %d", key);
 
     return name;
 }
