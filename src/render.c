@@ -735,6 +735,54 @@ static void MarkLeafFaces(BSP_Renderer *renderer, const BSP_Map *map, const BSP_
     }
 }
 
+static void ModelBounds(const BSP_Model *model, Vector3 *mins, Vector3 *maxs)
+{
+    mins->x = model->mins.x;
+    maxs->x = model->maxs.x;
+    mins->y = model->mins.z;
+    maxs->y = model->maxs.z;
+    mins->z = -model->maxs.y;
+    maxs->z = -model->mins.y;
+}
+
+static void MarkModelFaces(BSP_Renderer *renderer, const BSP_Model *model)
+{
+    int i;
+
+    for (i = 0; i < model->numfaces; i++)
+    {
+        int face = model->firstface + i;
+
+        if (face >= 0 && face < renderer->num_faces)
+            renderer->face_visible[face] = 1;
+    }
+}
+
+static void MarkBrushModels(BSP_Renderer *renderer, const BSP_Map *map, const RenderPlane planes[6])
+{
+    int i;
+
+    if (!map->models)
+        return;
+
+    for (i = 1; i < map->num_models; i++)
+    {
+        const BSP_Model *model = &map->models[i];
+        Vector3 mins;
+        Vector3 maxs;
+
+        if (model->numfaces <= 0)
+            continue;
+
+        ModelBounds(model, &mins, &maxs);
+
+        if (!BoxVisible(planes, mins, maxs))
+            continue;
+
+        MarkModelFaces(renderer, model);
+    }
+}
+
 static void MarkVisibleFaces(BSP_Renderer *renderer, const BSP_Map *map, Camera camera, float aspect)
 {
     RenderPlane planes[6];
@@ -765,6 +813,8 @@ static void MarkVisibleFaces(BSP_Renderer *renderer, const BSP_Map *map, Camera 
 
         MarkLeafFaces(renderer, map, leaf);
     }
+
+    MarkBrushModels(renderer, map, planes);
 }
 
 static void DrawVisibleBatch(BSP_Renderer *renderer, const BSP_Batch *batch)
