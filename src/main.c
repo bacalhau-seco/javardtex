@@ -168,6 +168,13 @@ static bool LoadMap(const char *path)
         skyColor.b = sb;
     }
 
+    char mapName[BSP_MAP_NAME_SIZE];
+
+    if (BSP_GetMapName(&bsp, mapName, (int)sizeof(mapName)))
+        MapName_Show(mapName);
+    else
+        MapName_Show(0);
+
     InitCamera(&camera, &player);
 
     return true;
@@ -369,6 +376,8 @@ int main(int argc, char **argv)
                         BSP_RenderSky(&bspRenderer, camera.position, (float)GetTime());
                         BSP_Render(&bspRenderer, &bsp, camera, (float)targetWidth / (float)targetHeight);
                     EndMode3D();
+
+                    MapName_Draw(delta);
                 }
                 break;
             }

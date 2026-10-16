@@ -14,6 +14,10 @@
 #define MENU_VERSION_TEXT_PCT 0.022f
 #define MENU_BORDER_PCT 0.0025f
 #define MENU_MARGIN_PCT 0.012f
+#define MAPNAME_TEXT_PCT 0.05f
+#define MAPNAME_HOLD_TIME 3.0f
+#define MAPNAME_FADE_TIME 1.0f
+#define MAPNAME_TOTAL_TIME (MAPNAME_FADE_TIME + MAPNAME_HOLD_TIME + MAPNAME_FADE_TIME)
 
 float Menu_Width(float percent);
 float Menu_Height(float percent);
@@ -23,5 +27,8 @@ bool Menu_IsHovered(Rectangle button);
 
 void Title_Draw(void);
 void Pause_Draw(void);
+
+void MapName_Show(const char *name);
+void MapName_Draw(float delta);
 
 #endif

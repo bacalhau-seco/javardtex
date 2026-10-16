@@ -1,5 +1,61 @@
 #include "../include/title.h"
 #include "../include/settings.h"
+#include "../include/bsp.h"
+
+#include <stdio.h>
+
+static char mapNameText[BSP_MAP_NAME_SIZE] = { 0 };
+static float mapNameTimer = 0.0f;
+
+void MapName_Show(const char *name)
+{
+    mapNameText[0] = '\0';
+    mapNameTimer = 0.0f;
+
+    if (!name || name[0] == '\0')
+        return;
+
+    snprintf(mapNameText, sizeof(mapNameText), "%s", name);
+    mapNameTimer = MAPNAME_TOTAL_TIME;
+}
+
+void MapName_Draw(float delta)
+{
+    if (mapNameText[0] == '\0' || mapNameTimer <= 0.0f)
+        return;
+
+    mapNameTimer -= delta;
+
+    if (mapNameTimer <= 0.0f)
+    {
+        mapNameTimer = 0.0f;
+        mapNameText[0] = '\0';
+        return;
+    }
+
+    const float fadeIn = (MAPNAME_TOTAL_TIME - mapNameTimer) / MAPNAME_FADE_TIME;
+    const float fadeOut = mapNameTimer / MAPNAME_FADE_TIME;
+    float fade = (fadeIn < fadeOut) ? fadeIn : fadeOut;
+
+    if (fade > 1.0f)
+        fade = 1.0f;
+    if (fade < 0.0f)
+        fade = 0.0f;
+
+    const float size = Menu_Height(MAPNAME_TEXT_PCT);
+
+    Color color = RAYWHITE;
+    color.a = (unsigned char)(fade * 255.0f);
+
+    Menu_DrawText(
+        Fonts_Get(FONT_MENU),
+        mapNameText,
+        GetRenderWidth() / 2,
+        (int)(GetRenderHeight() / 2 - size / 2.0f),
+        size,
+        color
+    );
+}
 
 float Menu_Width(float percent)
 {

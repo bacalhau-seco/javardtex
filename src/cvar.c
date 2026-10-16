@@ -88,6 +88,6 @@ void Cvar_Init(void)
     Cvar_Register("jumppenalty", 0.0f);
     Cvar_Register("stepheight", 16.0f);
     Cvar_Register("stepsmooth", 150.0f);
-    Cvar_Register("slopegrip", 0.7f);
+    Cvar_Register("slopegrip", 0.819f);
     Cvar_Register("slopeslide", 0.5f);
 }

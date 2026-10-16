@@ -1,7 +1,7 @@
 @SolidClass = worldspawn : "World entity"
 [
     wad(string) : "Texture WAD files"
-    message(string) : "Map title"
+    mapname(string) : "Map name (shown on load)"
     light(integer) : "Ambient light" : 10
     _sunlight(integer) : "Sunlight brightness" : 0
     _sunlight_color(color255) : "Sunlight color" : "255 255 255"

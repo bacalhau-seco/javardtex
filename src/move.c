@@ -7,6 +7,7 @@
 #define MOVE_MAX_CLIP_PLANES 5
 #define MOVE_MAX_BUMPS 4
 #define MOVE_GROUND_NORMAL 0.7f
+#define MOVE_GRIP_NORMAL 0.819f
 #define MOVE_SLIDE_NORMAL 0.5f
 #define MOVE_TRACTION_EPSILON 0.01f
 #define MOVE_STOP_EPSILON 0.1f
@@ -15,8 +16,10 @@
 
 static float SlopeTraction(float normalY)
 {
-    const float grip = Cvar_Value("slopegrip", MOVE_GROUND_NORMAL);
+    const float grip = Cvar_Value("slopegrip", MOVE_GRIP_NORMAL);
     const float slide = Cvar_Value("slopeslide", MOVE_SLIDE_NORMAL);
+
+    float t;
 
     if (normalY >= grip)
         return 1.0f;
@@ -24,7 +27,9 @@ static float SlopeTraction(float normalY)
     if (normalY <= slide || grip <= slide)
         return 0.0f;
 
-    return (normalY - slide) / (grip - slide);
+    t = (normalY - slide) / (grip - slide);
+
+    return t * t * (3.0f - 2.0f * t);
 }
 
 static float GroundTraction(const BSP_Map *map, const Body *body)

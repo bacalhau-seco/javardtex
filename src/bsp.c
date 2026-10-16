@@ -675,6 +675,57 @@ static void SunDirectionFromMangle(const float mangle[3], float *out)
     out[2] = y;
 }
 
+static bool ParseMapNameBlock(const char *start, const char *end, char *out, int size)
+{
+    const char *cursor = start;
+    char key[64];
+    char value[64];
+    bool is_worldspawn = false;
+    bool has_name = false;
+    char found[BSP_MAP_NAME_SIZE] = { 0 };
+
+    while (ReadQuoted(&cursor, end, key, sizeof(key)) &&
+           ReadQuoted(&cursor, end, value, sizeof(value)))
+    {
+        if (strcmp(key, "classname") == 0 && strcmp(value, "worldspawn") == 0)
+            is_worldspawn = true;
+
+        if (strcmp(key, "mapname") == 0 && value[0] != '\0')
+        {
+            snprintf(found, sizeof(found), "%s", value);
+            has_name = true;
+        }
+    }
+
+    if (!is_worldspawn || !has_name)
+        return false;
+
+    snprintf(out, (size_t)size, "%s", found);
+
+    return true;
+}
+
+bool BSP_GetMapName(const BSP_Map *map, char *out, int size)
+{
+    const char *cursor;
+    const char *end;
+
+    if (!map || !map->entities || !out || size <= 0)
+        return false;
+
+    cursor = map->entities;
+
+    while (NextEntityBlock(&cursor, &end))
+    {
+        if (ParseMapNameBlock(cursor, end, out, size))
+            return true;
+
+        cursor = end + 1;
+    }
+
+    return false;
+}
+
 static bool ParseSkyGradientBlock(const char *start, const char *end, BSP_SkyGradient *out)
 {
     const char *cursor = start;
