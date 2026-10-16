@@ -7,48 +7,55 @@
 #define MOVE_MAX_CLIP_PLANES 5
 #define MOVE_MAX_BUMPS 4
 #define MOVE_GROUND_NORMAL 0.7f
-#define MOVE_GRIP_NORMAL 0.819f
-#define MOVE_SLIDE_NORMAL 0.5f
-#define MOVE_TRACTION_EPSILON 0.01f
+#define MOVE_MAX_GROUND_RISE 180.0f
 #define MOVE_STOP_EPSILON 0.1f
+#define MOVE_MIN_WALK_SPEED 1.0f
 #define MOVE_GROUND_CHECK 2.0f
 #define MOVE_UNCROUCH_STEP 1.0f
 
-static float SlopeTraction(float normalY)
+static inline float HorizontalSpeed(Vector3 velocity)
 {
-    const float grip = Cvar_Value("slopegrip", MOVE_GRIP_NORMAL);
-    const float slide = Cvar_Value("slopeslide", MOVE_SLIDE_NORMAL);
-
-    float t;
-
-    if (normalY >= grip)
-        return 1.0f;
-
-    if (normalY <= slide || grip <= slide)
-        return 0.0f;
-
-    t = (normalY - slide) / (grip - slide);
-
-    return t * t * (3.0f - 2.0f * t);
+    return sqrtf(velocity.x * velocity.x + velocity.z * velocity.z);
 }
 
-static float GroundTraction(const BSP_Map *map, const Body *body)
+static inline float HorizontalDistanceSquared(Vector3 from, Vector3 to)
+{
+    float dx = to.x - from.x;
+    float dz = to.z - from.z;
+
+    return dx * dx + dz * dz;
+}
+
+static inline bool IsWalkableNormal(const Collision_TraceResult *trace)
+{
+    return trace->hit && trace->normal.y >= MOVE_GROUND_NORMAL;
+}
+
+static void CategorizePosition(const BSP_Map *map, Body *body)
 {
     Collision_TraceResult trace;
-    Vector3 end = body->position;
+    Vector3 point = body->position;
 
-    end.y -= MOVE_GROUND_CHECK;
+    point.y -= MOVE_GROUND_CHECK;
+    body->isGrounded = false;
 
-    if (!Collision_Trace(map, body->position, end, body->isCrouched, &trace))
-        return 0.0f;
+    if (body->velocity.y > MOVE_MAX_GROUND_RISE)
+        return;
 
-    if (trace.startsolid)
-        return 1.0f;
+    if (!Collision_Trace(map, body->position, point, body->isCrouched, &trace))
+        return;
 
-    if (!trace.hit)
-        return 0.0f;
+    if (trace.startsolid || trace.allsolid)
+    {
+        body->isGrounded = true;
+        return;
+    }
 
-    return SlopeTraction(trace.normal.y);
+    if (!IsWalkableNormal(&trace))
+        return;
+
+    body->isGrounded = true;
+    body->position = trace.endpos;
 }
 
 static void UpdateCrouch(const BSP_Map *map, Body *body, bool crouchHold)
@@ -109,27 +116,25 @@ static Vector3 ClipVelocity(Vector3 velocity, Vector3 normal, float overbounce)
     return out;
 }
 
-static Collision_TraceResult PushBody(const BSP_Map *map, Body *body, Vector3 move)
+static void PushBody(const BSP_Map *map, Body *body, Vector3 move)
 {
     Collision_TraceResult trace;
     Vector3 end = Vector3Add(body->position, move);
 
-    Collision_Trace(map, body->position, end, body->isCrouched, &trace);
+    if (!Collision_Trace(map, body->position, end, body->isCrouched, &trace))
+        return;
 
-    if (!trace.startsolid)
+    if (!trace.startsolid && !trace.allsolid)
         body->position = trace.endpos;
-
-    return trace;
 }
 
-static int SlideMove(const BSP_Map *map, Body *body, float delta)
+static void SlideMove(const BSP_Map *map, Body *body, float delta)
 {
     Vector3 planes[MOVE_MAX_CLIP_PLANES];
     Vector3 primalVelocity = body->velocity;
     Vector3 originalVelocity = body->velocity;
     float timeLeft = delta;
     int numPlanes = 0;
-    int blocked = 0;
     int bump;
 
     for (bump = 0; bump < MOVE_MAX_BUMPS; bump++)
@@ -153,7 +158,7 @@ static int SlideMove(const BSP_Map *map, Body *body, float delta)
         if (trace.allsolid)
         {
             body->velocity = Vector3Zero();
-            return 3;
+            break;
         }
 
         if (trace.fraction > 0.0f)
@@ -165,11 +170,6 @@ static int SlideMove(const BSP_Map *map, Body *body, float delta)
 
         if (trace.fraction == 1.0f)
             break;
-
-        if (trace.normal.y > MOVE_GROUND_NORMAL)
-            blocked |= 1;
-        else
-            blocked |= 2;
 
         timeLeft -= timeLeft * trace.fraction;
 
@@ -219,35 +219,26 @@ static int SlideMove(const BSP_Map *map, Body *body, float delta)
             break;
         }
     }
-
-    return blocked;
 }
 
 static void StayOnGround(const BSP_Map *map, Body *body)
 {
     float stepHeight = Cvar_Value("stepheight", 16.0f);
-    const float groundCheck = MOVE_GROUND_CHECK;
     Collision_TraceResult up;
     Collision_TraceResult down;
     Vector3 start = body->position;
     Vector3 end = body->position;
 
-    start.y += groundCheck;
-    end.y -= stepHeight + groundCheck;
+    start.y += MOVE_GROUND_CHECK;
+    end.y -= stepHeight + MOVE_GROUND_CHECK;
 
-    if (!Collision_Trace(map, body->position, start, body->isCrouched, &up))
+    if (!Collision_Trace(map, body->position, start, body->isCrouched, &up) || up.startsolid)
         return;
 
-    if (up.startsolid)
+    if (!Collision_Trace(map, up.endpos, end, body->isCrouched, &down) || down.startsolid)
         return;
 
-    if (!Collision_Trace(map, up.endpos, end, body->isCrouched, &down))
-        return;
-
-    if (down.startsolid || !down.hit || down.fraction == 0.0f || down.fraction == 1.0f)
-        return;
-
-    if (SlopeTraction(down.normal.y) <= MOVE_TRACTION_EPSILON)
+    if (down.fraction == 0.0f || down.fraction == 1.0f || !IsWalkableNormal(&down))
         return;
 
     body->stepViewOffset += down.endpos.y - body->position.y;
@@ -273,71 +264,11 @@ static void DecayStepViewOffset(Body *body, float delta)
         body->stepViewOffset = 0.0f;
 }
 
-static inline float HorizontalDistanceSquared(Vector3 from, Vector3 to)
-{
-    float dx = to.x - from.x;
-    float dz = to.z - from.z;
-
-    return dx * dx + dz * dz;
-}
-
-static void WalkMove(const BSP_Map *map, Body *body, float delta)
-{
-    float stepHeight = Cvar_Value("stepheight", 16.0f);
-    Vector3 oldPosition = body->position;
-    Vector3 oldVelocity = body->velocity;
-    Vector3 flatPosition;
-    Vector3 flatVelocity;
-    Collision_TraceResult downTrace;
-    bool wasGrounded = body->isGrounded;
-    int blocked = SlideMove(map, body, delta);
-
-    if (blocked == 0 || !wasGrounded)
-        return;
-
-    flatPosition = body->position;
-    flatVelocity = body->velocity;
-
-    body->position = oldPosition;
-    body->velocity = oldVelocity;
-
-    PushBody(map, body, (Vector3){ 0.0f, stepHeight, 0.0f });
-    SlideMove(map, body, delta);
-
-    downTrace = PushBody(map, body, (Vector3){ 0.0f, -stepHeight, 0.0f });
-
-    if (!downTrace.hit || SlopeTraction(downTrace.normal.y) <= MOVE_TRACTION_EPSILON
-        || HorizontalDistanceSquared(oldPosition, flatPosition) > HorizontalDistanceSquared(oldPosition, body->position))
-    {
-        body->position = flatPosition;
-        body->velocity = flatVelocity;
-        return;
-    }
-
-    if (blocked & 2)
-        body->stepViewOffset += body->position.y - oldPosition.y;
-
-    body->velocity.y = flatVelocity.y;
-}
-
-void Body_OnLand(Body *body)
-{
-    Vector3 hvel = { .x = body->velocity.x, .y = 0.0f, .z = body->velocity.z };
-    float speed = Vector3Length(hvel);
-    float penalty = Cvar_Value("jumppenalty", 0.0f);
-
-    if (speed > penalty)
-    {
-        hvel = Vector3Scale(hvel, (speed - penalty) / speed);
-        body->velocity.x = hvel.x;
-        body->velocity.z = hvel.z;
-    }
-}
-
 static void ApplyFriction(Body *body, bool crouchHold, float delta)
 {
-    float speed = sqrtf(body->velocity.x * body->velocity.x + body->velocity.z * body->velocity.z);
-    float friction;
+    float speed = HorizontalSpeed(body->velocity);
+    float stopSpeed = Cvar_Value("stopspeed", 100.0f);
+    float friction = Cvar_Value("friction", 4.0f);
     float control;
     float newSpeed;
     float scale;
@@ -345,15 +276,10 @@ static void ApplyFriction(Body *body, bool crouchHold, float delta)
     if (speed <= 0.001f)
         return;
 
-    friction = Cvar_Value("friction", 4.0f);
-
     if (crouchHold)
         friction *= 2.0f;
 
-    control = speed < Cvar_Value("stopspeed", 100.0f)
-        ? Cvar_Value("stopspeed", 100.0f)
-        : speed;
-
+    control = speed < stopSpeed ? stopSpeed : speed;
     newSpeed = speed - delta * control * friction;
 
     if (newSpeed < 0.0f)
@@ -380,6 +306,107 @@ static void Accelerate(Body *body, Vector3 wishDir, float wishSpeed, float accel
     body->velocity.z += wishDir.z * accel;
 }
 
+static void WalkMove(const BSP_Map *map, Body *body, float delta)
+{
+    float stepHeight = Cvar_Value("stepheight", 16.0f);
+    Collision_TraceResult trace;
+    Vector3 original;
+    Vector3 originalVelocity;
+    Vector3 down;
+    Vector3 downVelocity;
+    Vector3 dest;
+
+    body->velocity.y = 0.0f;
+
+    if (HorizontalSpeed(body->velocity) < MOVE_MIN_WALK_SPEED)
+    {
+        body->velocity.x = 0.0f;
+        body->velocity.z = 0.0f;
+        return;
+    }
+
+    dest = body->position;
+    dest.x += body->velocity.x * delta;
+    dest.z += body->velocity.z * delta;
+
+    if (!Collision_Trace(map, body->position, dest, body->isCrouched, &trace))
+    {
+        body->position = dest;
+        StayOnGround(map, body);
+        return;
+    }
+
+    if (trace.fraction == 1.0f)
+    {
+        body->position = trace.endpos;
+        StayOnGround(map, body);
+        return;
+    }
+
+    original = body->position;
+    originalVelocity = body->velocity;
+
+    SlideMove(map, body, delta);
+
+    down = body->position;
+    downVelocity = body->velocity;
+
+    body->position = original;
+    body->velocity = originalVelocity;
+
+    PushBody(map, body, (Vector3){ 0.0f, stepHeight, 0.0f });
+    SlideMove(map, body, delta);
+
+    dest = body->position;
+    dest.y -= stepHeight;
+
+    if (Collision_Trace(map, body->position, dest, body->isCrouched, &trace) && IsWalkableNormal(&trace))
+    {
+        if (!trace.startsolid && !trace.allsolid)
+            body->position = trace.endpos;
+
+        if (HorizontalDistanceSquared(original, down) <= HorizontalDistanceSquared(original, body->position))
+        {
+            body->stepViewOffset += body->position.y - original.y;
+            body->velocity.y = downVelocity.y;
+            return;
+        }
+    }
+
+    body->position = down;
+    body->velocity = downVelocity;
+}
+
+static void AirMove(const BSP_Map *map, Body *body, Vector3 wishDir, float wishSpeed, float delta)
+{
+    float wishCap = Cvar_Value("airwishcap", 30.0f);
+    float airSpeed = wishSpeed < wishCap ? wishSpeed : wishCap;
+    float halfGravity = Cvar_Value("gravity", 800.0f) * delta * 0.5f;
+
+    body->velocity.y -= halfGravity;
+
+    Accelerate(body, wishDir, airSpeed, Cvar_Value("airaccel", 100.0f) * wishSpeed * delta);
+
+    SlideMove(map, body, delta);
+
+    body->velocity.y -= halfGravity;
+}
+
+void Body_OnLand(Body *body)
+{
+    float speed = HorizontalSpeed(body->velocity);
+    float penalty = Cvar_Value("jumppenalty", 0.0f);
+    float scale;
+
+    if (speed <= penalty)
+        return;
+
+    scale = (speed - penalty) / speed;
+
+    body->velocity.x *= scale;
+    body->velocity.z *= scale;
+}
+
 void UpdatePlayer(const BSP_Map *map, Body *body, float rot, char side, char forward, bool jumpPressed, bool crouchHold, float delta)
 {
     Vector2 input = { (float)side, (float)-forward };
@@ -387,8 +414,7 @@ void UpdatePlayer(const BSP_Map *map, Body *body, float rot, char side, char for
     Vector3 right = { cosf(rot), 0.0f, -sinf(rot) };
     Vector3 wish;
     float wishSpeed;
-    bool wasGrounded = body->isGrounded;
-    bool jumped = false;
+    bool wasGrounded;
 
     UpdateCrouch(map, body, crouchHold);
 
@@ -404,41 +430,30 @@ void UpdatePlayer(const BSP_Map *map, Body *body, float rot, char side, char for
     body->dir = Vector3Normalize(wish);
     wishSpeed = Vector3Length(body->dir) * Cvar_Value("maxspeed", 290.0f);
 
+    CategorizePosition(map, body);
+
+    wasGrounded = body->isGrounded;
+
     if (body->isGrounded && jumpPressed)
     {
         body->velocity.y = Cvar_Value("jumpforce", 270.0f);
-        body->traction = 0.0f;
         body->isGrounded = false;
-        jumped = true;
     }
 
-    body->velocity.y -= Cvar_Value("gravity", 800.0f) * delta * (1.0f - body->traction);
-
-    if (body->traction > MOVE_TRACTION_EPSILON)
+    if (body->isGrounded)
     {
-        ApplyFriction(body, crouchHold, delta * body->traction);
-        Accelerate(body, body->dir, wishSpeed, Cvar_Value("accel", 5.0f) * wishSpeed * delta * body->traction);
-    }
+        body->velocity.y = 0.0f;
 
-    if (body->traction < 1.0f)
+        ApplyFriction(body, crouchHold, delta);
+        Accelerate(body, body->dir, wishSpeed, Cvar_Value("accel", 5.0f) * wishSpeed * delta);
+        WalkMove(map, body, delta);
+    }
+    else
     {
-        float airCap = Cvar_Value("airwishcap", 30.0f);
-        float airSpeed = wishSpeed < airCap ? wishSpeed : airCap;
-        float airAccel = Cvar_Value("airaccel", 100.0f) * Cvar_Value("maxspeed", 290.0f) * delta;
-
-        Accelerate(body, body->dir, airSpeed, airAccel * (1.0f - body->traction));
+        AirMove(map, body, body->dir, wishSpeed, delta);
     }
 
-    WalkMove(map, body, delta);
-
-    if (wasGrounded && !jumped && body->velocity.y <= 0.0f)
-        StayOnGround(map, body);
-
-    body->traction = jumped ? 0.0f : GroundTraction(map, body);
-    body->isGrounded = body->traction > MOVE_TRACTION_EPSILON;
-
-    body->velocity.y *= 1.0f - body->traction;
-
+    CategorizePosition(map, body);
     DecayStepViewOffset(body, delta);
 
     if (!wasGrounded && body->isGrounded)
