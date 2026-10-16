@@ -1,6 +1,7 @@
 #include "../include/title.h"
 #include "../include/settings.h"
 #include "../include/bsp.h"
+#include "../include/script.h"
 
 #include <stdio.h>
 
@@ -9,6 +10,8 @@ static float mapNameTimer = 0.0f;
 
 void MapName_Show(const char *name)
 {
+    const UI_MapTitleConfig *config = &UI_Get()->mapTitle;
+
     mapNameText[0] = '\0';
     mapNameTimer = 0.0f;
 
@@ -16,13 +19,17 @@ void MapName_Show(const char *name)
         return;
 
     snprintf(mapNameText, sizeof(mapNameText), "%s", name);
-    mapNameTimer = MAPNAME_TOTAL_TIME;
+    mapNameTimer = config->fadeTime * 2.0f + config->holdTime;
 }
 
 void MapName_Draw(float delta)
 {
+    const UI_MapTitleConfig *config = &UI_Get()->mapTitle;
+
     if (mapNameText[0] == '\0' || mapNameTimer <= 0.0f)
         return;
+
+    const float totalTime = config->fadeTime * 2.0f + config->holdTime;
 
     mapNameTimer -= delta;
 
@@ -33,19 +40,25 @@ void MapName_Draw(float delta)
         return;
     }
 
-    const float fadeIn = (MAPNAME_TOTAL_TIME - mapNameTimer) / MAPNAME_FADE_TIME;
-    const float fadeOut = mapNameTimer / MAPNAME_FADE_TIME;
-    float fade = (fadeIn < fadeOut) ? fadeIn : fadeOut;
+    float fade = 1.0f;
 
-    if (fade > 1.0f)
-        fade = 1.0f;
-    if (fade < 0.0f)
-        fade = 0.0f;
+    if (config->fadeTime > 0.0f)
+    {
+        const float fadeIn = (totalTime - mapNameTimer) / config->fadeTime;
+        const float fadeOut = mapNameTimer / config->fadeTime;
 
-    const float size = Menu_Height(MAPNAME_TEXT_PCT);
+        fade = (fadeIn < fadeOut) ? fadeIn : fadeOut;
 
-    Color color = RAYWHITE;
-    color.a = (unsigned char)(fade * 255.0f);
+        if (fade > 1.0f)
+            fade = 1.0f;
+        if (fade < 0.0f)
+            fade = 0.0f;
+    }
+
+    const float size = Menu_Height(config->textPct);
+
+    Color color = config->color;
+    color.a = (unsigned char)(fade * (float)config->color.a);
 
     Menu_DrawText(
         Fonts_Get(FONT_MENU),
@@ -86,12 +99,14 @@ bool Menu_IsHovered(Rectangle button)
 
 bool Menu_DrawButton(Rectangle button, const char *text)
 {
+    const UI_ButtonConfig *config = &UI_Get()->button;
+
     const bool hovered = Menu_IsHovered(button);
 
-    const float textSize = Menu_Height(MENU_BUTTON_TEXT_PCT);
+    const float textSize = Menu_Height(config->textPct);
 
-    DrawRectangleRec(button, hovered ? GRAY : LIGHTGRAY);
-    DrawRectangleLinesEx(button, Menu_Height(MENU_BORDER_PCT), DARKGRAY);
+    DrawRectangleRec(button, hovered ? config->hoverFill : config->fill);
+    DrawRectangleLinesEx(button, Menu_Height(config->borderPct), config->border);
 
     Menu_DrawText(
         Fonts_Get(FONT_MENU),
@@ -99,7 +114,7 @@ bool Menu_DrawButton(Rectangle button, const char *text)
         button.x + button.width / 2,
         button.y + (button.height - textSize) / 2,
         textSize,
-        BLACK
+        config->text
     );
 
     return (hovered && IsMouseButtonPressed(MOUSE_BUTTON_LEFT));
@@ -129,22 +144,26 @@ void Pause_Draw(void)
     const int centerX = GetRenderWidth() / 2;
     const int centerY = GetRenderHeight() / 2;
 
-    const float buttonWidth = Menu_Width(MENU_BUTTON_WIDTH_PCT);
-    const float buttonHeight = Menu_Height(MENU_BUTTON_HEIGHT_PCT);
-    const float buttonSpacing = Menu_Height(MENU_BUTTON_SPACING_PCT);
+    const UI_Config *ui = UI_Get();
+
+    const float buttonWidth = Menu_Width(ui->button.widthPct);
+    const float buttonHeight = Menu_Height(ui->button.heightPct);
+    const float buttonSpacing = Menu_Height(ui->button.spacingPct);
+    const float titleSize = Menu_Height(ui->gameTitle.textPct);
+    const float titleOffset = Menu_Height(ui->gameTitle.offsetPct);
 
     const float menuHeight = buttonCount * buttonHeight + (buttonCount - 1) * buttonSpacing;
-    const float menuY = centerY - menuHeight / 2.0f + Menu_Height(0.06f);
+    const float menuY = centerY - menuHeight / 2.0f + titleOffset;
 
-    Menu_DrawText(Fonts_Get(FONT_MENU), GAMENAME, centerX, menuY - Menu_Height(MENU_TITLE_TEXT_PCT) - Menu_Height(0.06f), Menu_Height(MENU_TITLE_TEXT_PCT), BLACK);
+    Menu_DrawText(Fonts_Get(FONT_MENU), ui->gameTitle.text, centerX, menuY - titleSize - titleOffset, titleSize, ui->gameTitle.color);
 
     DrawTextEx(
         Fonts_Get(FONT_UI),
         VERSION,
-        (Vector2){ Menu_Width(MENU_MARGIN_PCT), GetRenderHeight() - Menu_Height(MENU_MARGIN_PCT) - Menu_Height(MENU_VERSION_TEXT_PCT) },
-        Menu_Height(MENU_VERSION_TEXT_PCT),
+        (Vector2){ Menu_Width(ui->version.marginPct), GetRenderHeight() - Menu_Height(ui->version.marginPct) - Menu_Height(ui->version.textPct) },
+        Menu_Height(ui->version.textPct),
         1.0f,
-        RAYWHITE
+        ui->version.pauseTextColor
     );
 
     for (int i = 0; i < buttonCount; i++)
@@ -205,21 +224,25 @@ void Title_Draw(void)
     const int centerX = GetRenderWidth() / 2;
     const int centerY = GetRenderHeight() / 2;
 
-    const float buttonWidth = Menu_Width(MENU_BUTTON_WIDTH_PCT);
-    const float buttonHeight = Menu_Height(MENU_BUTTON_HEIGHT_PCT);
-    const float buttonSpacing = Menu_Height(MENU_BUTTON_SPACING_PCT);
+    const UI_Config *ui = UI_Get();
+
+    const float buttonWidth = Menu_Width(ui->button.widthPct);
+    const float buttonHeight = Menu_Height(ui->button.heightPct);
+    const float buttonSpacing = Menu_Height(ui->button.spacingPct);
+    const float titleSize = Menu_Height(ui->gameTitle.textPct);
+    const float titleOffset = Menu_Height(ui->gameTitle.offsetPct);
 
     const float menuHeight = buttonCount * buttonHeight + (buttonCount - 1) * buttonSpacing;
-    const float menuY = centerY - menuHeight / 2.0f + Menu_Height(0.06f);
+    const float menuY = centerY - menuHeight / 2.0f + titleOffset;
 
-    Menu_DrawText(Fonts_Get(FONT_MENU), GAMENAME, centerX, menuY - Menu_Height(MENU_TITLE_TEXT_PCT) - Menu_Height(0.06f), Menu_Height(MENU_TITLE_TEXT_PCT), BLACK);
+    Menu_DrawText(Fonts_Get(FONT_MENU), ui->gameTitle.text, centerX, menuY - titleSize - titleOffset, titleSize, ui->gameTitle.color);
     DrawTextEx(
         Fonts_Get(FONT_UI),
         VERSION,
-        (Vector2){ Menu_Width(MENU_MARGIN_PCT), GetRenderHeight() - Menu_Height(MENU_MARGIN_PCT) - Menu_Height(MENU_VERSION_TEXT_PCT) },
-        Menu_Height(MENU_VERSION_TEXT_PCT),
+        (Vector2){ Menu_Width(ui->version.marginPct), GetRenderHeight() - Menu_Height(ui->version.marginPct) - Menu_Height(ui->version.textPct) },
+        Menu_Height(ui->version.textPct),
         1.0f,
-        BLACK
+        ui->version.textColor
     );
 
     for (int i = 0; i < buttonCount; i++)

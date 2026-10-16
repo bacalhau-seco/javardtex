@@ -1,4 +1,5 @@
 #include "../include/game.h"
+#include "../include/script.h"
 
 bool newGameRequested = false;
 bool quitRequested = false;
@@ -26,8 +27,10 @@ void Fonts_Load(void)
     if (fontsLoaded)
         return;
 
-    fonts[FONT_UI] = LoadGameFont(FONT_UI_PATH, FONT_UI_SIZE);
-    fonts[FONT_MENU] = LoadGameFont(FONT_MENU_PATH, FONT_MENU_SIZE);
+    const UI_Config *ui = UI_Get();
+
+    fonts[FONT_UI] = LoadGameFont(ui->fontUi.path, ui->fontUi.size);
+    fonts[FONT_MENU] = LoadGameFont(ui->fontMenu.path, ui->fontMenu.size);
 
     fontsLoaded = true;
 }

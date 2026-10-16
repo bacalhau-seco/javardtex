@@ -4,16 +4,17 @@
 #include "../include/title.h"
 #include "../include/input.h"
 #include "../include/cvar.h"
+#include "../include/script.h"
 
-#define SETTINGS_LABEL_TEXT_PCT 0.024f
-#define SETTINGS_ROW_HEIGHT_PCT 0.045f
-#define SETTINGS_ROW_SPACING_PCT 0.010f
-#define SETTINGS_LABEL_WIDTH_PCT 0.18f
-#define SETTINGS_KEY_WIDTH_PCT 0.16f
+static inline const UI_ButtonConfig *UiButton(void)
+{
+    return &UI_Get()->button;
+}
 
-#define SETTINGS_TAB_WIDTH_PCT 0.14f
-#define SETTINGS_TAB_HEIGHT_PCT 0.045f
-#define SETTINGS_ASPECT_WIDTH_PCT 0.085f
+static inline const UI_SettingsConfig *UiSettings(void)
+{
+    return &UI_Get()->settings;
+}
 
 typedef enum {
     SETTINGS_TAB_VIDEO,
@@ -165,10 +166,10 @@ static inline int RowsCount(void)
 
 static int DrawStepperRow(const char *label, const char *value, int centerX, int y)
 {
-    const float height = Menu_Height(SETTINGS_ROW_HEIGHT_PCT);
-    const float stepWidth = Menu_Height(SETTINGS_ROW_HEIGHT_PCT) * 1.6f;
-    const float valueWidth = Menu_Width(SETTINGS_KEY_WIDTH_PCT);
-    const float spacing = Menu_Width(MENU_MARGIN_PCT);
+    const float height = Menu_Height(UiSettings()->rowHeightPct);
+    const float stepWidth = Menu_Height(UiSettings()->rowHeightPct) * UiSettings()->stepperWidthScale;
+    const float valueWidth = Menu_Width(UiSettings()->keyWidthPct);
+    const float spacing = Menu_Width(UiSettings()->columnSpacingPct);
     const float startX = centerX + spacing;
 
     const Rectangle minus = { startX, y, stepWidth, height };
@@ -180,10 +181,10 @@ static int DrawStepperRow(const char *label, const char *value, int centerX, int
     Menu_DrawText(
         Fonts_Get(FONT_UI),
         label,
-        centerX - (int)(Menu_Width(SETTINGS_LABEL_WIDTH_PCT) / 2.0f),
-        y + (int)((height - Menu_Height(SETTINGS_LABEL_TEXT_PCT)) / 2.0f),
-        Menu_Height(SETTINGS_LABEL_TEXT_PCT),
-        BLACK
+        centerX - (int)(Menu_Width(UiSettings()->labelWidthPct) / 2.0f),
+        y + (int)((height - Menu_Height(UiSettings()->labelTextPct)) / 2.0f),
+        Menu_Height(UiSettings()->labelTextPct),
+        UiSettings()->labelColor
     );
 
     if (Menu_DrawButton(minus, "-"))
@@ -260,10 +261,10 @@ static void DrawResolutionRow(int index, int centerX, int y)
     const SettingsResolution *res = &resolutions[visibleResolutions[index]];
 
     const Rectangle button = {
-        centerX - Menu_Width(MENU_BUTTON_WIDTH_PCT) / 2.0f,
+        centerX - Menu_Width(UiButton()->widthPct) / 2.0f,
         y,
-        Menu_Width(MENU_BUTTON_WIDTH_PCT),
-        Menu_Height(SETTINGS_ROW_HEIGHT_PCT)
+        Menu_Width(UiButton()->widthPct),
+        Menu_Height(UiSettings()->rowHeightPct)
     };
 
     const char *text = TextFormat(
@@ -280,10 +281,10 @@ static void DrawResolutionRow(int index, int centerX, int y)
 static void DrawNativeRow(int centerX, int y)
 {
     const Rectangle button = {
-        centerX - Menu_Width(MENU_BUTTON_WIDTH_PCT) / 2.0f,
+        centerX - Menu_Width(UiButton()->widthPct) / 2.0f,
         y,
-        Menu_Width(MENU_BUTTON_WIDTH_PCT),
-        Menu_Height(SETTINGS_ROW_HEIGHT_PCT)
+        Menu_Width(UiButton()->widthPct),
+        Menu_Height(UiSettings()->rowHeightPct)
     };
 
     const char *text = TextFormat(
@@ -300,10 +301,10 @@ static void DrawNativeRow(int centerX, int y)
 static void DrawScalingRow(int centerX, int y)
 {
     const Rectangle button = {
-        centerX - Menu_Width(MENU_BUTTON_WIDTH_PCT) / 2.0f,
+        centerX - Menu_Width(UiButton()->widthPct) / 2.0f,
         y,
-        Menu_Width(MENU_BUTTON_WIDTH_PCT),
-        Menu_Height(SETTINGS_ROW_HEIGHT_PCT)
+        Menu_Width(UiButton()->widthPct),
+        Menu_Height(UiSettings()->rowHeightPct)
     };
 
     const bool stretched = stretchScaling;
@@ -322,8 +323,8 @@ static void DrawAspectRow(int centerX, int y)
         "16:10"
     };
 
-    const float itemWidth = Menu_Width(SETTINGS_ASPECT_WIDTH_PCT);
-    const float spacing = Menu_Width(SETTINGS_ROW_SPACING_PCT);
+    const float itemWidth = Menu_Width(UiSettings()->aspectWidthPct);
+    const float spacing = Menu_Width(UiSettings()->rowSpacingPct);
     const float totalWidth = SETTINGS_ASPECT_COUNT * itemWidth + (SETTINGS_ASPECT_COUNT - 1) * spacing;
 
     int i;
@@ -334,7 +335,7 @@ static void DrawAspectRow(int centerX, int y)
             centerX - totalWidth / 2.0f + i * (itemWidth + spacing),
             y,
             itemWidth,
-            Menu_Height(SETTINGS_ROW_HEIGHT_PCT)
+            Menu_Height(UiSettings()->rowHeightPct)
         };
 
         const char *text = (i == (int)activeAspect) ? TextFormat("> %s", labels[i]) : labels[i];
@@ -354,8 +355,8 @@ static void DrawTabs(int centerX, int y)
         "CONTROLS"
     };
 
-    const float tabWidth = Menu_Width(SETTINGS_TAB_WIDTH_PCT);
-    const float spacing = Menu_Width(SETTINGS_ROW_SPACING_PCT);
+    const float tabWidth = Menu_Width(UiSettings()->tabWidthPct);
+    const float spacing = Menu_Width(UiSettings()->rowSpacingPct);
     const float totalWidth = SETTINGS_TAB_COUNT * tabWidth + (SETTINGS_TAB_COUNT - 1) * spacing;
 
     int i;
@@ -366,7 +367,7 @@ static void DrawTabs(int centerX, int y)
             centerX - totalWidth / 2.0f + i * (tabWidth + spacing),
             y,
             tabWidth,
-            Menu_Height(SETTINGS_TAB_HEIGHT_PCT)
+            Menu_Height(UiSettings()->tabHeightPct)
         };
 
         const char *text = (i == (int)activeTab) ? TextFormat("> %s", labels[i]) : labels[i];
@@ -381,7 +382,7 @@ static void DrawTabs(int centerX, int y)
 
 static inline int RowsTop(void)
 {
-    const float rowsHeight = RowsCount() * Menu_Height(SETTINGS_ROW_HEIGHT_PCT + SETTINGS_ROW_SPACING_PCT);
+    const float rowsHeight = RowsCount() * Menu_Height(UiSettings()->rowHeightPct + UiSettings()->rowSpacingPct);
 
     return (int)(GetRenderHeight() / 2.0f - rowsHeight / 2.0f);
 }
@@ -415,19 +416,19 @@ static void UpdateCapture(void)
 
 static void DrawBindRow(int bind, int centerX, int y)
 {
-    const float keyWidth = Menu_Width(SETTINGS_KEY_WIDTH_PCT);
-    const float keySpacing = Menu_Width(MENU_MARGIN_PCT);
-    const float startX = centerX + Menu_Width(MENU_MARGIN_PCT);
+    const float keyWidth = Menu_Width(UiSettings()->keyWidthPct);
+    const float keySpacing = Menu_Width(UiSettings()->columnSpacingPct);
+    const float startX = centerX + Menu_Width(UiSettings()->columnSpacingPct);
 
     int slot;
 
     Menu_DrawText(
         Fonts_Get(FONT_UI),
         Input_BindLabel((InputBind)bind),
-        centerX - (int)(Menu_Width(SETTINGS_LABEL_WIDTH_PCT) / 2.0f),
-        y + (int)((Menu_Height(SETTINGS_ROW_HEIGHT_PCT) - Menu_Height(SETTINGS_LABEL_TEXT_PCT)) / 2.0f),
-        Menu_Height(SETTINGS_LABEL_TEXT_PCT),
-        BLACK
+        centerX - (int)(Menu_Width(UiSettings()->labelWidthPct) / 2.0f),
+        y + (int)((Menu_Height(UiSettings()->rowHeightPct) - Menu_Height(UiSettings()->labelTextPct)) / 2.0f),
+        Menu_Height(UiSettings()->labelTextPct),
+        UiSettings()->labelColor
     );
 
     for (slot = 0; slot < INPUT_BIND_SLOTS; slot++)
@@ -436,7 +437,7 @@ static void DrawBindRow(int bind, int centerX, int y)
             startX + slot * (keyWidth + keySpacing),
             y,
             keyWidth,
-            Menu_Height(SETTINGS_ROW_HEIGHT_PCT)
+            Menu_Height(UiSettings()->rowHeightPct)
         };
 
         const bool capturing = capturingBind == bind && capturingSlot == slot;
@@ -487,22 +488,22 @@ void Settings_Draw(void)
 
     const int rows = RowsCount();
 
-    const float rowStep = Menu_Height(SETTINGS_ROW_HEIGHT_PCT + SETTINGS_ROW_SPACING_PCT);
+    const float rowStep = Menu_Height(UiSettings()->rowHeightPct + UiSettings()->rowSpacingPct);
 
     const Rectangle backButton = {
-        centerX - Menu_Width(MENU_BUTTON_WIDTH_PCT) / 2.0f,
-        top + rows * rowStep + Menu_Height(MENU_BUTTON_SPACING_PCT * 2.0f),
-        Menu_Width(MENU_BUTTON_WIDTH_PCT),
-        Menu_Height(MENU_BUTTON_HEIGHT_PCT)
+        centerX - Menu_Width(UiButton()->widthPct) / 2.0f,
+        top + rows * rowStep + Menu_Height(UiButton()->spacingPct * 2.0f),
+        Menu_Width(UiButton()->widthPct),
+        Menu_Height(UiButton()->heightPct)
     };
 
     int i;
 
     UpdateCapture();
 
-    Menu_DrawText(Fonts_Get(FONT_MENU), "SETTINGS", centerX, top - (int)Menu_Height(0.14f), Menu_Height(MENU_TITLE_TEXT_PCT), BLACK);
+    Menu_DrawText(Fonts_Get(FONT_MENU), "SETTINGS", centerX, top - (int)Menu_Height(UiSettings()->titleOffsetPct), Menu_Height(UI_Get()->gameTitle.textPct), UI_Get()->gameTitle.color);
 
-    DrawTabs(centerX, top - (int)Menu_Height(0.07f));
+    DrawTabs(centerX, top - (int)Menu_Height(UiSettings()->tabsOffsetPct));
 
     if (activeTab == SETTINGS_TAB_CONTROLS)
     {

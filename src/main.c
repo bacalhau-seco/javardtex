@@ -9,6 +9,7 @@
 #include "../include/render.h"
 #include "../include/collision.h"
 #include "../include/args.h"
+#include "../include/script.h"
 
 static Body player = { 0 };
 static BSP_Map bsp = { 0 };
@@ -187,6 +188,7 @@ int main(int argc, char **argv)
         return 1;
 
     Cvar_Init();
+    Script_Init();
 
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(1280, 960, "javardtex");
@@ -207,6 +209,7 @@ int main(int argc, char **argv)
         if (!LoadMap(args.mapPath))
         {
             Fonts_Unload();
+            Script_Shutdown();
             CloseWindow();
             return 1;
         }
@@ -402,6 +405,7 @@ int main(int argc, char **argv)
         UnloadRenderTexture(screenTarget);
 
     Fonts_Unload();
+    Script_Shutdown();
 
     UnloadMap();
 
