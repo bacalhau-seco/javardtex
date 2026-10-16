@@ -68,15 +68,26 @@ Game assets are stored in `game/`.
 * [x] Basic entity processing
 * [x] Basic triggers
 * [x] TrenchBroom FGD support
+* [ ] Lua API
+* [ ] Player scriping
+* [ ] UI scripting
+* [ ] Entity scripting
+* [ ] Game packaging
 
 ### November 2026
 
-* [ ] Player gameplay
-* [ ] Damage system
-* [ ] Game entity definitions
+* [ ] glTF 2.0 loading
+* [ ] Static model rendering
+* [ ] Skeletal animations
+* [ ] Character rendering
+* [ ] Animated entities
 
 ### December 2026
 
+* [ ] Material properties
+* [ ] Particle system
+* [ ] Rendering improvements
+* [ ] Basic visual effects
 * [ ] Console commands
 * [ ] Game rules
 * [ ] Game-specific Cvars
@@ -88,23 +99,14 @@ Game assets are stored in `game/`.
 
 ### February 2027
 
-* [ ] Material properties
-* [ ] Parallax sky
-* [ ] Particle system
-* [ ] Rendering improvements
-* [ ] Basic visual effects
+* [ ] Multiplayer
 
 ### March 2027
 
-* [ ] glTF 2.0 loading
-* [ ] Static model rendering
-* [ ] Skeletal animations
-* [ ] Character rendering
-* [ ] Animated entities
+* [ ] Multiplayer
 
 ### April 2027
 
-* [ ] Game packaging
 * [ ] Game export
 * [ ] Game jam
 * [ ] Bug fixing
@@ -125,8 +127,6 @@ Game assets are stored in `game/`.
 * [ ] JavardTex 1.0 release
 
 ## Tools
-
-### Required
 
 * [ ] WAD3 creation tool
 
