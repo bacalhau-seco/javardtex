@@ -10,8 +10,8 @@
 #include "../include/collision.h"
 #include "../include/args.h"
 #include "../include/script.h"
+#include "../include/world.h"
 
-static Body player = { 0 };
 static BSP_Map bsp = { 0 };
 static BSP_Renderer bspRenderer = { 0 };
 static Vector2 lookRotation = { 0 };
@@ -23,16 +23,10 @@ static bool insideNextLevel = false;
 static Color skyColor = { 0, 0, 0, 255 };
 GameState gameState = GAME_STATE_TITLE;
 static GameState oldGameState = GAME_STATE_TITLE;
-static float tickAccumulator = 0.0f;
 static RenderTexture2D screenTarget = { 0 };
 static int targetWidth = 0;
 static int targetHeight = 0;
 static Vector2 mouseScale = { 1.0f, 1.0f };
-static bool jumpPending = false;
-
-#define TICK_RATE_MIN 10.0f
-#define TICK_RATE_MAX 1000.0f
-#define TICK_MAX_STEPS 8
 
 static void UpdateTargetFps(void)
 {
@@ -93,18 +87,6 @@ static Rectangle ScreenTargetDestination(void)
     };
 }
 
-static inline float TickDelta(void)
-{
-    float rate = Cvar_Value("tickrate", 128.0f);
-
-    if (rate < TICK_RATE_MIN)
-        rate = TICK_RATE_MIN;
-    else if (rate > TICK_RATE_MAX)
-        rate = TICK_RATE_MAX;
-
-    return 1.0f / rate;
-}
-
 static void UnloadMap(void)
 {
     if (!mapLoaded)
@@ -139,19 +121,15 @@ static bool LoadMap(const char *path)
     bspRenderer = loadedRenderer;
     mapLoaded = true;
     insideNextLevel = true;
-    tickAccumulator = 0.0f;
-    jumpPending = false;
 
-    Body fresh = { 0 };
-    player = fresh;
     lookRotation.x = 0;
     lookRotation.y = 0;
     ignoreMouseDelta = true;
 
-    Vector3 spawn;
+    Vector3 spawn = { 0.0f, 0.0f, 0.0f };
 
-    if (Collision_GetSpawn(&bsp, &spawn))
-        player.position = spawn;
+    Collision_GetSpawn(&bsp, &spawn);
+    World_Reset(spawn);
 
     float spawnYaw;
 
@@ -176,7 +154,9 @@ static bool LoadMap(const char *path)
     else
         MapName_Show(0);
 
-    InitCamera(&camera, &player);
+    Body view = World_ViewBody();
+
+    InitCamera(&camera, &view);
 
     return true;
 }
@@ -253,7 +233,6 @@ int main(int argc, char **argv)
 
         InputState in = GetInputState();
         const float delta = GetFrameTime();
-        const float tickDelta = TickDelta();
 
         switch (gameState)
         {
@@ -279,8 +258,7 @@ int main(int argc, char **argv)
             if (IsKeyPressed(KEY_ESCAPE))
             {
                 gameState = GAME_STATE_PAUSE;
-                tickAccumulator = 0.0f;
-                jumpPending = false;
+                World_Pause();
                 break;
             }
 
@@ -301,37 +279,17 @@ int main(int argc, char **argv)
             lookRotation.y += in.mouse.y * Settings_Sensitivity();
             lookRotation.y = Clamp(lookRotation.y, -PI/2+0.001f, PI/2-0.001f);
 
-            if (in.jump)
-                jumpPending = true;
+            World_Update(&bsp, in, lookRotation.x, delta);
 
-            tickAccumulator += delta;
-
-            if (tickAccumulator > tickDelta * TICK_MAX_STEPS)
-                tickAccumulator = tickDelta * TICK_MAX_STEPS;
-
-            while (tickAccumulator >= tickDelta)
             {
-                tickAccumulator -= tickDelta;
+                Body view = World_ViewBody();
 
-                UpdatePlayer(
-                    &bsp,
-                    &player,
-                    lookRotation.x,
-                    in.side,
-                    in.forward,
-                    jumpPending,
-                    in.crouch,
-                    tickDelta
-                );
-
-                jumpPending = false;
+                Camera_Update(&camera, &view, lookRotation);
             }
-
-            Camera_Update(&camera, &player, lookRotation);
 
             char nextMap[BSP_MAP_NAME_SIZE];
 
-            if (!Collision_CheckNextLevel(&bsp, player.position, player.isCrouched, nextMap, (int)sizeof(nextMap)))
+            if (!Collision_CheckNextLevel(&bsp, World_Body()->position, World_Body()->isCrouched, nextMap, (int)sizeof(nextMap)))
             {
                 insideNextLevel = false;
             }

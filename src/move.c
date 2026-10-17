@@ -26,6 +26,11 @@ static inline float HorizontalDistanceSquared(Vector3 from, Vector3 to)
     return dx * dx + dz * dz;
 }
 
+static inline float EyePosition(const Body *body)
+{
+    return body->position.y + Collision_EyeHeight(body->isCrouched);
+}
+
 static inline bool IsWalkableNormal(const Collision_TraceResult *trace)
 {
     return trace->hit && trace->normal.y >= MOVE_GROUND_NORMAL;
@@ -69,13 +74,19 @@ static void UpdateCrouch(const BSP_Map *map, Body *body, bool crouchHold)
     {
         if (!body->isCrouched)
         {
-            if (!body->isGrounded)
+            const bool airborne = !body->isGrounded;
+            const float eye = EyePosition(body);
+
+            if (airborne)
             {
                 body->position.y += heightDiff;
                 body->crouchFeetOffset = heightDiff;
             }
 
             body->isCrouched = true;
+
+            if (airborne)
+                body->stepViewOffset += EyePosition(body) - eye;
         }
     }
     else if (body->isCrouched)
@@ -84,6 +95,8 @@ static void UpdateCrouch(const BSP_Map *map, Body *body, bool crouchHold)
 
         for (drop = body->crouchFeetOffset; drop <= heightDiff; drop += MOVE_UNCROUCH_STEP)
         {
+            const bool airborne = !body->isGrounded;
+            const float eye = EyePosition(body);
             Vector3 stood = body->position;
 
             stood.y -= drop;
@@ -94,6 +107,10 @@ static void UpdateCrouch(const BSP_Map *map, Body *body, bool crouchHold)
             body->position = stood;
             body->crouchFeetOffset = 0.0f;
             body->isCrouched = false;
+
+            if (airborne)
+                body->stepViewOffset += EyePosition(body) - eye;
+
             break;
         }
     }
