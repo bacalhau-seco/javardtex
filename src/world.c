@@ -85,12 +85,12 @@ Body World_ViewBody(void)
 {
     const float alpha = TickAlpha(TickDelta());
     const float eyeHeight = Collision_EyeHeight(body.isCrouched);
-    const float previousEye = previousBody.position.y + Collision_EyeHeight(previousBody.isCrouched);
-    const float currentEye = body.position.y + eyeHeight;
+    const float previousEye = previousBody.position.z + Collision_EyeHeight(previousBody.isCrouched);
+    const float currentEye = body.position.z + eyeHeight;
     Body view = body;
 
     view.position = Vector3Lerp(previousBody.position, body.position, alpha);
-    view.position.y = previousEye + (currentEye - previousEye) * alpha - eyeHeight;
+    view.position.z = previousEye + (currentEye - previousEye) * alpha - eyeHeight;
     view.stepViewOffset = previousBody.stepViewOffset + (body.stepViewOffset - previousBody.stepViewOffset) * alpha;
 
     return view;

@@ -262,7 +262,7 @@ static inline float NodePlaneDistance(const BSP_Plane *plane, Vector3 p)
     return Vector3DotProduct(plane->normal, p) - plane->dist;
 }
 
-int BSP_FindLeaf(const BSP_Map *map, Vector3 quake_position)
+int BSP_FindLeaf(const BSP_Map *map, Vector3 position)
 {
     int num;
 
@@ -285,7 +285,7 @@ int BSP_FindLeaf(const BSP_Map *map, Vector3 quake_position)
             return 0;
 
         plane = &map->planes[node->planenum];
-        num = node->children[NodePlaneDistance(plane, quake_position) < 0.0f ? 1 : 0];
+        num = node->children[NodePlaneDistance(plane, position) < 0.0f ? 1 : 0];
     }
 
     return ~num;
@@ -671,8 +671,8 @@ static void SunDirectionFromMangle(const float mangle[3], float *out)
     float z = sinf(pitch);
 
     out[0] = -x;
-    out[1] = -z;
-    out[2] = y;
+    out[1] = -y;
+    out[2] = -z;
 }
 
 static bool ParseMapNameBlock(const char *start, const char *end, char *out, int size)

@@ -10,16 +10,6 @@
 #define COLLISION_TRACE_BUMPS 0.1f
 #define COLLISION_MAX_TRACE_DEPTH 256
 
-static inline Vector3 WorldToQuake(Vector3 w)
-{
-    return (Vector3){ w.x, -w.z, w.y };
-}
-
-static inline Vector3 QuakeToWorld(Vector3 q)
-{
-    return (Vector3){ q.x, q.z, -q.y };
-}
-
 static inline float PlaneDistance(const BSP_Plane *plane, Vector3 p)
 {
     return Vector3DotProduct(plane->normal, p) - plane->dist;
@@ -41,14 +31,14 @@ float Collision_EyeHeight(bool crouched)
 
 static inline Vector3 Collision_FeetToOrigin(Vector3 feet, bool crouched)
 {
-    feet.y += Collision_PlayerHeight(crouched) * 0.5f;
+    feet.z += Collision_PlayerHeight(crouched) * 0.5f;
 
     return feet;
 }
 
 static inline Vector3 Collision_OriginToFeet(Vector3 origin, bool crouched)
 {
-    origin.y -= Collision_PlayerHeight(crouched) * 0.5f;
+    origin.z -= Collision_PlayerHeight(crouched) * 0.5f;
 
     return origin;
 }
@@ -62,8 +52,8 @@ bool Collision_GetSpawn(const BSP_Map *map, Vector3 *feet)
     if (!feet || !BSP_GetPlayerStart(map, &x, &y, &z))
         return false;
 
-    *feet = QuakeToWorld((Vector3){ x, y, z });
-    feet->y -= Collision_PlayerHeight(false) * 0.5f;
+    *feet = (Vector3){ x, y, z };
+    feet->z -= Collision_PlayerHeight(false) * 0.5f;
 
     return true;
 }
@@ -75,7 +65,7 @@ bool Collision_CheckNextLevel(const BSP_Map *map, Vector3 feet, bool crouched, c
     if (!mapName || mapNameSize <= 0 || !BSP_GetNextLevel(map, &next))
         return false;
 
-    Vector3 origin = WorldToQuake(Collision_FeetToOrigin(feet, crouched));
+    Vector3 origin = Collision_FeetToOrigin(feet, crouched);
 
     const float halfWidth = COLLISION_PLAYER_HALF_WIDTH;
     const float halfHeight = Collision_PlayerHeight(crouched) * 0.5f;
@@ -138,7 +128,7 @@ bool Collision_IsSolid(const BSP_Map *map, Vector3 feet, bool crouched)
     if (!map || map->num_models == 0 || !map->clipnodes || !map->planes)
         return false;
 
-    origin = WorldToQuake(Collision_FeetToOrigin(feet, crouched));
+    origin = Collision_FeetToOrigin(feet, crouched);
 
     return Collision_HullPointContents(map, Collision_HullHeadnode(map, crouched), origin) == BSP_CONTENTS_SOLID;
 }
@@ -280,13 +270,13 @@ bool Collision_Trace(const BSP_Map *map, Vector3 startFeet, Vector3 endFeet, boo
     trace->hit = false;
     trace->fraction = 1.0f;
     trace->endpos = endFeet;
-    trace->normal = (Vector3){ 0.0f, 1.0f, 0.0f };
+    trace->normal = (Vector3){ 0.0f, 0.0f, 1.0f };
 
     if (!map || map->num_models == 0 || !map->clipnodes || !map->planes)
         return false;
 
-    p1 = WorldToQuake(Collision_FeetToOrigin(startFeet, crouched));
-    p2 = WorldToQuake(Collision_FeetToOrigin(endFeet, crouched));
+    p1 = Collision_FeetToOrigin(startFeet, crouched);
+    p2 = Collision_FeetToOrigin(endFeet, crouched);
 
     trace->allsolid = true;
     trace->endpos = p2;
@@ -309,8 +299,8 @@ bool Collision_Trace(const BSP_Map *map, Vector3 startFeet, Vector3 endFeet, boo
     }
 
     trace->hit = trace->hit || trace->fraction < 1.0f;
-    trace->endpos = Collision_OriginToFeet(QuakeToWorld(trace->endpos), crouched);
-    trace->normal = Vector3Normalize(QuakeToWorld(trace->normal));
+    trace->endpos = Collision_OriginToFeet(trace->endpos, crouched);
+    trace->normal = Vector3Normalize(trace->normal);
 
     return true;
 }

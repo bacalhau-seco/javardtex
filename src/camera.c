@@ -6,8 +6,8 @@ static inline Vector3 EyePosition(const Body *player)
 {
     return (Vector3){
         player->position.x,
-        player->position.y + Collision_EyeHeight(player->isCrouched) - player->stepViewOffset,
-        player->position.z,
+        player->position.y,
+        player->position.z + Collision_EyeHeight(player->isCrouched) - player->stepViewOffset,
     };
 }
 
@@ -17,8 +17,8 @@ void Camera_Update(Camera *camera,
 {
     camera->position = EyePosition(player);
 
-    const Vector3 up = { 0.0f, 1.0f, 0.0f };
-    const Vector3 forward = { 0.0f, 0.0f, -1.0f };
+    const Vector3 up = { 0.0f, 0.0f, 1.0f };
+    const Vector3 forward = { 0.0f, 1.0f, 0.0f };
 
     Vector3 yaw = Vector3RotateByAxisAngle(forward, up, lookRotation.x);
 

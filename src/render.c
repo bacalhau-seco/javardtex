@@ -167,8 +167,8 @@ static void AppendVertex(BSP_Batch *batch, const FaceContext *context, const Vec
 
     out = &batch->vertices[batch->count++];
     out->x = vertex->x;
-    out->y = vertex->z;
-    out->z = -vertex->y;
+    out->y = vertex->y;
+    out->z = vertex->z;
     out->s = s / (float)context->texture->width;
     out->t = -t / (float)context->texture->height;
     out->lm_s = lm_s;
@@ -301,8 +301,8 @@ static void AppendSkyVertex(BSP_Sky *sky, const Vector3 *vertex)
 
     out = &sky->vertices[sky->count * 3];
     out[0] = vertex->x;
-    out[1] = vertex->z;
-    out[2] = -vertex->y;
+    out[1] = vertex->y;
+    out[2] = vertex->z;
     sky->count++;
 }
 
@@ -397,8 +397,8 @@ static void BuildSky(BSP_Renderer *renderer, const BSP_Map *map)
     renderer->sky.horizon_color[1] = 1.0f;
     renderer->sky.horizon_color[2] = 1.0f;
     renderer->sky.sun_direction[0] = 0.0f;
-    renderer->sky.sun_direction[1] = 1.0f;
-    renderer->sky.sun_direction[2] = 0.0f;
+    renderer->sky.sun_direction[1] = 0.0f;
+    renderer->sky.sun_direction[2] = 1.0f;
     renderer->sky.fade = 0.45f;
 
     if (BSP_GetSunlightColor(map, &r, &g, &b))
@@ -710,10 +710,10 @@ static void LeafBounds(const BSP_Leaf *leaf, Vector3 *mins, Vector3 *maxs)
 {
     mins->x = (float)leaf->mins[0];
     maxs->x = (float)leaf->maxs[0];
-    mins->y = (float)leaf->mins[2];
-    maxs->y = (float)leaf->maxs[2];
-    mins->z = -(float)leaf->maxs[1];
-    maxs->z = -(float)leaf->mins[1];
+    mins->y = (float)leaf->mins[1];
+    maxs->y = (float)leaf->maxs[1];
+    mins->z = (float)leaf->mins[2];
+    maxs->z = (float)leaf->maxs[2];
 }
 
 static void MarkLeafFaces(BSP_Renderer *renderer, const BSP_Map *map, const BSP_Leaf *leaf)
@@ -739,10 +739,10 @@ static void ModelBounds(const BSP_Model *model, Vector3 *mins, Vector3 *maxs)
 {
     mins->x = model->mins.x;
     maxs->x = model->maxs.x;
-    mins->y = model->mins.z;
-    maxs->y = model->maxs.z;
-    mins->z = -model->maxs.y;
-    maxs->z = -model->mins.y;
+    mins->y = model->mins.y;
+    maxs->y = model->maxs.y;
+    mins->z = model->mins.z;
+    maxs->z = model->maxs.z;
 }
 
 static void MarkModelFaces(BSP_Renderer *renderer, const BSP_Model *model)
@@ -786,8 +786,7 @@ static void MarkBrushModels(BSP_Renderer *renderer, const BSP_Map *map, const Re
 static void MarkVisibleFaces(BSP_Renderer *renderer, const BSP_Map *map, Camera camera, float aspect)
 {
     RenderPlane planes[6];
-    Vector3 quakeEye = { camera.position.x, -camera.position.z, camera.position.y };
-    int viewLeaf = BSP_FindLeaf(map, quakeEye);
+    int viewLeaf = BSP_FindLeaf(map, camera.position);
     bool hasVis = BSP_DecompressVis(map, viewLeaf, renderer->leaf_vis, renderer->leaf_vis_size);
     int i;
 
