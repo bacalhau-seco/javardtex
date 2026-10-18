@@ -306,7 +306,7 @@ int main(int argc, char **argv)
         }
 
         BeginTextureMode(screenTarget);
-            ClearBackground(((gameState == GAME_STATE_GAME || gameState == GAME_STATE_PAUSE) && mapLoaded) ? skyColor : RAYWHITE);
+            ClearBackground(((gameState == GAME_STATE_GAME || gameState == GAME_STATE_PAUSE) && mapLoaded) ? skyColor : BLACK);
 
             switch (gameState)
             {
