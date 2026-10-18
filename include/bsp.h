@@ -184,6 +184,7 @@ typedef struct BSP_NextLevel
 bool BSP_GetPlayerStart(const BSP_Map *map, float *x, float *y, float *z);
 bool BSP_GetPlayerStartAngle(const BSP_Map *map, float *angle);
 bool BSP_GetNextLevel(const BSP_Map *map, BSP_NextLevel *out);
+bool BSP_GetNextLevelByIndex(const BSP_Map *map, int index, BSP_NextLevel *out);
 bool BSP_GetSunlightColor(const BSP_Map *map, unsigned char *r, unsigned char *g, unsigned char *b);
 bool BSP_GetMapName(const BSP_Map *map, char *out, int size);
 int BSP_FindLeaf(const BSP_Map *map, Vector3 position);

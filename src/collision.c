@@ -61,8 +61,9 @@ bool Collision_GetSpawn(const BSP_Map *map, Vector3 *feet)
 bool Collision_CheckNextLevel(const BSP_Map *map, Vector3 feet, bool crouched, char *mapName, int mapNameSize)
 {
     BSP_NextLevel next;
+    int index;
 
-    if (!mapName || mapNameSize <= 0 || !BSP_GetNextLevel(map, &next))
+    if (!mapName || mapNameSize <= 0)
         return false;
 
     Vector3 origin = Collision_FeetToOrigin(feet, crouched);
@@ -70,18 +71,23 @@ bool Collision_CheckNextLevel(const BSP_Map *map, Vector3 feet, bool crouched, c
     const float halfWidth = COLLISION_PLAYER_HALF_WIDTH;
     const float halfHeight = Collision_PlayerHeight(crouched) * 0.5f;
 
-    if (origin.x + halfWidth < next.mins.x || origin.x - halfWidth > next.maxs.x)
-        return false;
+    for (index = 0; BSP_GetNextLevelByIndex(map, index, &next); index++)
+    {
+        if (origin.x + halfWidth < next.mins.x || origin.x - halfWidth > next.maxs.x)
+            continue;
 
-    if (origin.y + halfWidth < next.mins.y || origin.y - halfWidth > next.maxs.y)
-        return false;
+        if (origin.y + halfWidth < next.mins.y || origin.y - halfWidth > next.maxs.y)
+            continue;
 
-    if (origin.z + halfHeight < next.mins.z || origin.z - halfHeight > next.maxs.z)
-        return false;
+        if (origin.z + halfHeight < next.mins.z || origin.z - halfHeight > next.maxs.z)
+            continue;
 
-    snprintf(mapName, (size_t)mapNameSize, "%s", next.map);
+        snprintf(mapName, (size_t)mapNameSize, "%s", next.map);
 
-    return true;
+        return true;
+    }
+
+    return false;
 }
 
 bool Collision_GetSpawnYaw(const BSP_Map *map, float *yaw)

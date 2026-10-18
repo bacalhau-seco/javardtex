@@ -537,25 +537,40 @@ static bool ParseNextLevelBlock(const BSP_Map *map, const char *start, const cha
     return true;
 }
 
-bool BSP_GetNextLevel(const BSP_Map *map, BSP_NextLevel *out)
+bool BSP_GetNextLevelByIndex(const BSP_Map *map, int index, BSP_NextLevel *out)
 {
     const char *cursor;
     const char *end;
+    BSP_NextLevel found;
+    int matches = 0;
 
-    if (!map || !map->entities || !out)
+    if (!map || !map->entities || !out || index < 0)
         return false;
 
     cursor = map->entities;
 
     while (NextEntityBlock(&cursor, &end))
     {
-        if (ParseNextLevelBlock(map, cursor, end, out))
-            return true;
+        if (ParseNextLevelBlock(map, cursor, end, &found))
+        {
+            if (matches == index)
+            {
+                *out = found;
+                return true;
+            }
+
+            matches++;
+        }
 
         cursor = end + 1;
     }
 
     return false;
+}
+
+bool BSP_GetNextLevel(const BSP_Map *map, BSP_NextLevel *out)
+{
+    return BSP_GetNextLevelByIndex(map, 0, out);
 }
 
 static bool FindPlayerStart(const BSP_Map *map, float *x, float *y, float *z, float *angle)
