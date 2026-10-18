@@ -189,13 +189,4 @@ bool BSP_GetMapName(const BSP_Map *map, char *out, int size);
 int BSP_FindLeaf(const BSP_Map *map, Vector3 position);
 bool BSP_DecompressVis(const BSP_Map *map, int leaf, uint8_t *out, int out_size);
 
-typedef struct {
-    float top[3];
-    float bottom[3];
-    float fade;
-    float sun_direction[3];
-} BSP_SkyGradient;
-
-bool BSP_GetSkyGradient(const BSP_Map *map, BSP_SkyGradient *out);
-
 #endif

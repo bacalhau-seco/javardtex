@@ -318,7 +318,6 @@ int main(int argc, char **argv)
                 if (mapLoaded)
                 {
                     BeginMode3D(camera);
-                        BSP_RenderSky(&bspRenderer, camera.position, (float)GetTime());
                         BSP_Render(&bspRenderer, &bsp, camera, (float)targetWidth / (float)targetHeight);
                     EndMode3D();
                 }
@@ -334,7 +333,6 @@ int main(int argc, char **argv)
                 if (mapLoaded)
                 {
                     BeginMode3D(camera);
-                        BSP_RenderSky(&bspRenderer, camera.position, (float)GetTime());
                         BSP_Render(&bspRenderer, &bsp, camera, (float)targetWidth / (float)targetHeight);
                     EndMode3D();
 
