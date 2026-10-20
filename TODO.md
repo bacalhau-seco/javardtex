@@ -24,6 +24,15 @@
 * Decals
 * Gore
 
+## Entities
+### brush entities
+* func_door
+* func_train
+* func_liquid
+
+### point entities
+
+
 ## Engine Structure
 
 ```
