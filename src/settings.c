@@ -4,6 +4,7 @@
 #include "../include/title.h"
 #include "../include/input.h"
 #include "../include/cvar.h"
+#include "raymath.h"
 #include "../include/script.h"
 
 static inline const UI_ButtonConfig *UiButton(void)
@@ -72,6 +73,7 @@ static bool stretchScaling = false;
 static float fieldOfView = 90.0f;
 static float sensitivity = 0.001f;
 static int maxFps = 90;
+static bool mipmaps = true;
 
 int Settings_NativeWidth(void)
 {
@@ -117,6 +119,11 @@ int Settings_MaxFps(void)
     return maxFps;
 }
 
+bool Settings_Mipmaps(void)
+{
+    return mipmaps;
+}
+
 void Settings_Init(void)
 {
     const int refresh = GetMonitorRefreshRate(GetCurrentMonitor());
@@ -128,20 +135,10 @@ void Settings_Init(void)
         maxFps = refresh;
 }
 
-static inline int NativeWidth(void)
-{
-    return Settings_NativeWidth();
-}
-
-static inline int NativeHeight(void)
-{
-    return Settings_NativeHeight();
-}
-
 static void RebuildVisibleResolutions(void)
 {
-    const int nativeWidth = NativeWidth();
-    const int nativeHeight = NativeHeight();
+    const int nativeWidth = Settings_NativeWidth();
+    const int nativeHeight = Settings_NativeHeight();
 
     int i;
 
@@ -161,7 +158,7 @@ static void RebuildVisibleResolutions(void)
 
 static inline int RowsCount(void)
 {
-    return (activeTab == SETTINGS_TAB_CONTROLS) ? BIND_COUNT + 1 : visibleCount + 5;
+    return (activeTab == SETTINGS_TAB_CONTROLS) ? BIND_COUNT + 1 : visibleCount + 6;
 }
 
 static int DrawStepperRow(const char *label, const char *value, int centerX, int y)
@@ -198,36 +195,20 @@ static int DrawStepperRow(const char *label, const char *value, int centerX, int
     return delta;
 }
 
-static float ClampFloatRange(float value, float min, float max)
-{
-    if (value < min)
-        return min;
-
-    return value > max ? max : value;
-}
-
 static void DrawFovRow(int centerX, int y)
 {
     const int delta = DrawStepperRow("FOV", TextFormat("%d", (int)(fieldOfView + 0.5f)), centerX, y);
 
     if (delta != 0)
-        fieldOfView = ClampFloatRange(fieldOfView + delta * SETTINGS_FOV_STEP, SETTINGS_FOV_MIN, SETTINGS_FOV_MAX);
+        fieldOfView = Clamp(fieldOfView + delta * SETTINGS_FOV_STEP, SETTINGS_FOV_MIN, SETTINGS_FOV_MAX);
 }
 
 static void DrawFpsRow(int centerX, int y)
 {
     const int delta = DrawStepperRow("MAX FPS", TextFormat("%d", maxFps), centerX, y);
 
-    if (delta == 0)
-        return;
-
-    maxFps += delta * SETTINGS_FPS_STEP;
-
-    if (maxFps < SETTINGS_FPS_MIN)
-        maxFps = SETTINGS_FPS_MIN;
-
-    if (maxFps > SETTINGS_FPS_MAX)
-        maxFps = SETTINGS_FPS_MAX;
+    if (delta != 0)
+        maxFps = (int)Clamp((float)(maxFps + delta * SETTINGS_FPS_STEP), SETTINGS_FPS_MIN, SETTINGS_FPS_MAX);
 }
 
 static void DrawSensitivityRow(int centerX, int y)
@@ -235,11 +216,26 @@ static void DrawSensitivityRow(int centerX, int y)
     const int delta = DrawStepperRow("SENSITIVITY", TextFormat("%.1f", sensitivity * 1000.0f), centerX, y);
 
     if (delta != 0)
-        sensitivity = ClampFloatRange(
+        sensitivity = Clamp(
             sensitivity + delta * SETTINGS_SENSITIVITY_STEP,
             SETTINGS_SENSITIVITY_MIN,
             SETTINGS_SENSITIVITY_MAX
         );
+}
+
+static void DrawMipmapsRow(int centerX, int y)
+{
+    const Rectangle button = {
+        centerX - Menu_Width(UiButton()->widthPct) / 2.0f,
+        y,
+        Menu_Width(UiButton()->widthPct),
+        Menu_Height(UiSettings()->rowHeightPct)
+    };
+
+    if (!Menu_DrawButton(button, mipmaps ? "MIPMAPS: ON" : "MIPMAPS: OFF"))
+        return;
+
+    mipmaps = !mipmaps;
 }
 
 static void ApplyResolution(int width, int height)
@@ -289,13 +285,13 @@ static void DrawNativeRow(int centerX, int y)
 
     const char *text = TextFormat(
         "%sNATIVE (%dx%d)",
-        IsCurrentResolution(NativeWidth(), NativeHeight()) ? "> " : "",
-        NativeWidth(),
-        NativeHeight()
+        IsCurrentResolution(Settings_NativeWidth(), Settings_NativeHeight()) ? "> " : "",
+        Settings_NativeWidth(),
+        Settings_NativeHeight()
     );
 
     if (Menu_DrawButton(button, text))
-        ApplyResolution(NativeWidth(), NativeHeight());
+        ApplyResolution(Settings_NativeWidth(), Settings_NativeHeight());
 }
 
 static void DrawScalingRow(int centerX, int y)
@@ -523,6 +519,7 @@ void Settings_Draw(void)
         DrawScalingRow(centerX, (int)(top + (visibleCount + 2) * rowStep));
         DrawFovRow(centerX, (int)(top + (visibleCount + 3) * rowStep));
         DrawFpsRow(centerX, (int)(top + (visibleCount + 4) * rowStep));
+        DrawMipmapsRow(centerX, (int)(top + (visibleCount + 5) * rowStep));
     }
 
     if (!Menu_DrawButton(backButton, "BACK"))

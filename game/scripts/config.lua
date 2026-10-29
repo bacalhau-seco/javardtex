@@ -13,10 +13,10 @@ ui.button = {
 }
 
 ui.gametitle = {
-    text = "demo",
-    textSize = 0.065,
+    text = "Unreal Engine",
+    textSize = 0.1,
     offset = 0.06,
-    textColor = { 0, 0, 0, 255 }
+    textColor = { 255, 255, 255, 255 }
 }
 
 ui.maptitle = {

@@ -17,6 +17,9 @@ RAYLIB_DIR = external/raylib/src
 # Changing them needs a rebuild of raylib: make raylib-clean raylib
 RAYLIB_FLAGS ?=
 
+# Half-Life assets (skyboxes, detail textures) ship as TGA, disabled in raylib by default
+RAYLIB_CUSTOM_CFLAGS = -DSUPPORT_FILEFORMAT_TGA=1
+
 HEADERS = \
 	$(RAYLIB_DIR)/raylib.h \
 	$(RAYLIB_DIR)/raymath.h \
@@ -35,7 +38,7 @@ run: raylib
 	./$(TARGET)
 
 raylib:
-	$(MAKE) -C $(RAYLIB_DIR) $(RAYLIB_FLAGS)
+	$(MAKE) -C $(RAYLIB_DIR) $(RAYLIB_FLAGS) CUSTOM_CFLAGS="$(RAYLIB_CUSTOM_CFLAGS)"
 	mkdir -p include lib
 	cp $(HEADERS) include/
 	cp $(RAYLIB_DIR)/libraylib.a lib/

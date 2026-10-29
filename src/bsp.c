@@ -1,4 +1,6 @@
 #include "../include/bsp.h"
+#include "../include/resource.h"
+#include "../include/wad.h"
 
 #include "raymath.h"
 
@@ -6,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define BSP_ENTITY_VALUE_SIZE 1024
 #define BSP_MIP_LEVELS 4
 #define BSP_MIP_HEADER_SIZE 40
 #define BSP_PALETTE_COLORS 256
@@ -93,6 +96,11 @@ static bool LoadMipTexture(const uint8_t *miptex, size_t available, BSP_Texture 
     if (width <= 0 || height <= 0)
         return false;
 
+    memcpy(texture->name, miptex, BSP_TEXTURE_NAME_SIZE);
+    texture->name[BSP_TEXTURE_NAME_SIZE - 1] = '\0';
+    texture->width = (uint32_t)width;
+    texture->height = (uint32_t)height;
+
     for (i = 0; i < BSP_MIP_LEVELS; i++)
     {
         if (offsets[i] < BSP_MIP_HEADER_SIZE || (size_t)offsets[i] >= available)
@@ -121,10 +129,6 @@ static bool LoadMipTexture(const uint8_t *miptex, size_t available, BSP_Texture 
 
     memcpy(texture->pixels, miptex + offsets[0], mip0_size);
     memcpy(texture->palette, miptex + palette_offset + sizeof(uint16_t), BSP_PALETTE_BYTES);
-    memcpy(texture->name, miptex, BSP_TEXTURE_NAME_SIZE);
-    texture->name[BSP_TEXTURE_NAME_SIZE - 1] = '\0';
-    texture->width = (uint32_t)width;
-    texture->height = (uint32_t)height;
 
     return true;
 }
@@ -193,6 +197,8 @@ static bool LoadMapLumps(FILE *file, const BSP_Lump *lumps, BSP_Map *map)
         && LoadArray(file, &lumps[BSP_LUMP_VISIBILITY], 1, (void **)&map->visdata, &map->visdata_size);
 }
 
+static void LoadWadTextures(BSP_Map *map);
+
 bool BSP_Load(BSP_Map *map, const char *path)
 {
     FILE *file;
@@ -224,6 +230,9 @@ bool BSP_Load(BSP_Map *map, const char *path)
     }
 
     map->version = version;
+    snprintf(map->path, sizeof(map->path), "%s", path);
+
+    LoadWadTextures(map);
 
     return true;
 }
@@ -428,48 +437,7 @@ static bool ReadQuoted(const char **cursor, const char *end, char *out, size_t s
     return true;
 }
 
-static bool ParsePlayerStartBlock(const char *start, const char *end, float *x, float *y, float *z, float *angle)
-{
-    const char *cursor = start;
-    char key[64];
-    char value[64];
-    bool is_start = false;
-    bool has_origin = false;
-    float ox = 0.0f;
-    float oy = 0.0f;
-    float oz = 0.0f;
-    float yaw = 0.0f;
-    float pitch = 0.0f;
-    float roll = 0.0f;
-
-    while (ReadQuoted(&cursor, end, key, sizeof(key)) &&
-           ReadQuoted(&cursor, end, value, sizeof(value)))
-    {
-        if (strcmp(key, "classname") == 0 && strcmp(value, "info_player_start") == 0)
-            is_start = true;
-
-        if (strcmp(key, "origin") == 0 && sscanf(value, "%f %f %f", &ox, &oy, &oz) == 3)
-            has_origin = true;
-
-        if (strcmp(key, "angle") == 0)
-            sscanf(value, "%f", &yaw);
-
-        if (strcmp(key, "angles") == 0)
-            sscanf(value, "%f %f %f", &pitch, &yaw, &roll);
-    }
-
-    if (!is_start || !has_origin)
-        return false;
-
-    *x = ox;
-    *y = oy;
-    *z = oz;
-    *angle = yaw;
-
-    return true;
-}
-
-static bool NextEntityBlock(const char **cursor, const char **blockEnd)
+static bool NextEntity(const char **cursor, const char **blockEnd)
 {
     const char *open;
     const char *close;
@@ -493,105 +461,173 @@ static bool NextEntityBlock(const char **cursor, const char **blockEnd)
     return true;
 }
 
-static bool ParseNextLevelBlock(const BSP_Map *map, const char *start, const char *end, BSP_NextLevel *out)
+static bool ValueForKey(const char *start, const char *end, const char *key, char *out, int size)
 {
     const char *cursor = start;
-    char key[64];
-    char value[64];
-    bool is_next_level = false;
-    bool has_map = false;
-    int model_index = -1;
-    Vector3 offset = { 0.0f, 0.0f, 0.0f };
-    BSP_NextLevel found = { 0 };
+    char foundKey[64];
+    char value[BSP_ENTITY_VALUE_SIZE];
 
-    while (ReadQuoted(&cursor, end, key, sizeof(key)) &&
+    while (ReadQuoted(&cursor, end, foundKey, sizeof(foundKey)) &&
            ReadQuoted(&cursor, end, value, sizeof(value)))
     {
-        if (strcmp(key, "classname") == 0 && strcmp(value, "func_next_level") == 0)
-            is_next_level = true;
+        if (strcmp(foundKey, key) != 0)
+            continue;
 
-        if (strcmp(key, "model") == 0 && value[0] == '*')
-            sscanf(value + 1, "%d", &model_index);
+        snprintf(out, (size_t)size, "%s", value);
 
-        if (strcmp(key, "origin") == 0)
-            sscanf(value, "%f %f %f", &offset.x, &offset.y, &offset.z);
-
-        if (strcmp(key, "map") == 0 && value[0] != '\0')
-        {
-            snprintf(found.map, sizeof(found.map), "%s", value);
-            has_map = true;
-        }
+        return true;
     }
 
-    if (!is_next_level || !has_map)
-        return false;
-
-    if (!map->models || model_index < 0 || model_index >= map->num_models)
-        return false;
-
-    found.mins = Vector3Add(map->models[model_index].mins, offset);
-    found.maxs = Vector3Add(map->models[model_index].maxs, offset);
-
-    *out = found;
-
-    return true;
+    return false;
 }
 
-bool BSP_GetNextLevelByIndex(const BSP_Map *map, int index, BSP_NextLevel *out)
+static bool FindEntityByClass(const BSP_Map *map, const char *classname, int index, const char **start, const char **end)
 {
     const char *cursor;
-    const char *end;
-    BSP_NextLevel found;
+    const char *blockEnd;
+    char value[64];
     int matches = 0;
 
-    if (!map || !map->entities || !out || index < 0)
+    if (!map || !map->entities)
         return false;
 
     cursor = map->entities;
 
-    while (NextEntityBlock(&cursor, &end))
+    while (NextEntity(&cursor, &blockEnd))
     {
-        if (ParseNextLevelBlock(map, cursor, end, &found))
+        if (ValueForKey(cursor, blockEnd, "classname", value, sizeof(value)) && strcmp(value, classname) == 0)
         {
             if (matches == index)
             {
-                *out = found;
+                *start = cursor;
+                *end = blockEnd;
+
                 return true;
             }
 
             matches++;
         }
 
-        cursor = end + 1;
+        cursor = blockEnd + 1;
     }
 
     return false;
 }
 
-bool BSP_GetNextLevel(const BSP_Map *map, BSP_NextLevel *out)
+static inline int CountMissingTextures(const BSP_Map *map)
 {
-    return BSP_GetNextLevelByIndex(map, 0, out);
-}
+    int missing = 0;
+    int i;
 
-static bool FindPlayerStart(const BSP_Map *map, float *x, float *y, float *z, float *angle)
-{
-    const char *cursor;
-    const char *end;
-
-    if (!map || !map->entities || !x || !y || !z || !angle)
-        return false;
-
-    cursor = map->entities;
-
-    while (NextEntityBlock(&cursor, &end))
+    for (i = 0; i < map->num_textures; i++)
     {
-        if (ParsePlayerStartBlock(cursor, end, x, y, z, angle))
-            return true;
-
-        cursor = end + 1;
+        if (!map->textures[i].pixels && map->textures[i].name[0] != '\0')
+            missing++;
     }
 
-    return false;
+    return missing;
+}
+
+static inline const char *WadFileName(const char *path)
+{
+    const char *name = path;
+    const char *cursor;
+
+    for (cursor = path; *cursor != '\0'; cursor++)
+    {
+        if (*cursor == '/' || *cursor == '\\')
+            name = cursor + 1;
+    }
+
+    return name;
+}
+
+static int FillTexturesFromWad(BSP_Map *map, const char *wadPath)
+{
+    Wad wad;
+    int filled = 0;
+    int i;
+
+    if (!Wad_Open(&wad, wadPath))
+    {
+        TraceLog(LOG_WARNING, "WAD: failed to open %s", wadPath);
+        return 0;
+    }
+
+    for (i = 0; i < map->num_textures; i++)
+    {
+        BSP_Texture *texture = &map->textures[i];
+        uint8_t *data = NULL;
+        int size = 0;
+
+        if (texture->pixels || texture->name[0] == '\0')
+            continue;
+
+        if (!Wad_ReadMipTexture(&wad, texture->name, &data, &size))
+            continue;
+
+        if (LoadMipTexture(data, (size_t)size, texture))
+            filled++;
+
+        free(data);
+    }
+
+    Wad_Close(&wad);
+
+    return filled;
+}
+
+static void LoadWadTextures(BSP_Map *map)
+{
+    char list[BSP_ENTITY_VALUE_SIZE];
+    char path[RESOURCE_PATH_SIZE];
+    const char *start;
+    const char *end;
+    char *cursor;
+    int missing;
+
+    if (!map || map->num_textures == 0)
+        return;
+
+    missing = CountMissingTextures(map);
+
+    if (missing == 0)
+        return;
+
+    if (!FindEntityByClass(map, "worldspawn", 0, &start, &end))
+        return;
+
+    if (!ValueForKey(start, end, "wad", list, (int)sizeof(list)))
+        return;
+
+    cursor = list;
+
+    while (*cursor != '\0' && missing > 0)
+    {
+        char *separator = strchr(cursor, ';');
+        const char *name;
+
+        if (separator)
+            *separator = '\0';
+
+        name = WadFileName(cursor);
+
+        if (name[0] != '\0')
+        {
+            if (Resource_FindFile(map->path, name, path, (int)sizeof(path)))
+                missing -= FillTexturesFromWad(map, path);
+            else
+                TraceLog(LOG_WARNING, "WAD: %s not found", name);
+        }
+
+        if (!separator)
+            break;
+
+        cursor = separator + 1;
+    }
+
+    if (missing > 0)
+        TraceLog(LOG_WARNING, "WAD: %d texture(s) unresolved", missing);
 }
 
 static int ClampColorComponent(int value)
@@ -605,28 +641,80 @@ static int ClampColorComponent(int value)
     return value;
 }
 
-static bool ParseSunlightColorBlock(const char *start, const char *end, unsigned char *r, unsigned char *g, unsigned char *b)
+static bool ParseNextLevel(const BSP_Map *map, const char *start, const char *end, BSP_NextLevel *out)
 {
-    const char *cursor = start;
-    char key[64];
     char value[64];
-    bool is_worldspawn = false;
-    bool has_color = false;
-    int cr = 255;
-    int cg = 255;
-    int cb = 255;
+    Vector3 offset = { 0.0f, 0.0f, 0.0f };
+    int model = -1;
 
-    while (ReadQuoted(&cursor, end, key, sizeof(key)) &&
-           ReadQuoted(&cursor, end, value, sizeof(value)))
+    if (!ValueForKey(start, end, "map", value, sizeof(value)) || value[0] == '\0')
+        return false;
+
+    snprintf(out->map, sizeof(out->map), "%s", value);
+
+    if (!ValueForKey(start, end, "model", value, sizeof(value)) || value[0] != '*')
+        return false;
+
+    if (sscanf(value + 1, "%d", &model) != 1)
+        return false;
+
+    if (!map->models || model < 0 || model >= map->num_models)
+        return false;
+
+    if (ValueForKey(start, end, "origin", value, sizeof(value)))
+        sscanf(value, "%f %f %f", &offset.x, &offset.y, &offset.z);
+
+    out->mins = Vector3Add(map->models[model].mins, offset);
+    out->maxs = Vector3Add(map->models[model].maxs, offset);
+
+    return true;
+}
+
+bool BSP_GetNextLevelByIndex(const BSP_Map *map, int index, BSP_NextLevel *out)
+{
+    const char *start;
+    const char *end;
+    BSP_NextLevel found;
+    int matches = 0;
+    int i;
+
+    if (!out || index < 0)
+        return false;
+
+    for (i = 0; FindEntityByClass(map, "func_next_level", i, &start, &end); i++)
     {
-        if (strcmp(key, "classname") == 0 && strcmp(value, "worldspawn") == 0)
-            is_worldspawn = true;
+        if (!ParseNextLevel(map, start, end, &found))
+            continue;
 
-        if (strcmp(key, "_sunlight_color") == 0 && sscanf(value, "%d %d %d", &cr, &cg, &cb) == 3)
-            has_color = true;
+        if (matches == index)
+        {
+            *out = found;
+
+            return true;
+        }
+
+        matches++;
     }
 
-    if (!is_worldspawn || !has_color)
+    return false;
+}
+
+bool BSP_GetSunlightColor(const BSP_Map *map, unsigned char *r, unsigned char *g, unsigned char *b)
+{
+    const char *start;
+    const char *end;
+    char value[64];
+    int cr;
+    int cg;
+    int cb;
+
+    if (!r || !g || !b || !FindEntityByClass(map, "worldspawn", 0, &start, &end))
+        return false;
+
+    if (!ValueForKey(start, end, "_sunlight_color", value, sizeof(value)))
+        return false;
+
+    if (sscanf(value, "%d %d %d", &cr, &cg, &cb) != 3)
         return false;
 
     *r = (unsigned char)ClampColorComponent(cr);
@@ -636,81 +724,70 @@ static bool ParseSunlightColorBlock(const char *start, const char *end, unsigned
     return true;
 }
 
-bool BSP_GetSunlightColor(const BSP_Map *map, unsigned char *r, unsigned char *g, unsigned char *b)
+bool BSP_GetMapName(const BSP_Map *map, char *out, int size)
 {
-    const char *cursor;
+    const char *start;
     const char *end;
-
-    if (!map || !map->entities || !r || !g || !b)
-        return false;
-
-    cursor = map->entities;
-
-    while (NextEntityBlock(&cursor, &end))
-    {
-        if (ParseSunlightColorBlock(cursor, end, r, g, b))
-            return true;
-
-        cursor = end + 1;
-    }
-
-    return false;
-}
-
-static bool ParseMapNameBlock(const char *start, const char *end, char *out, int size)
-{
-    const char *cursor = start;
-    char key[64];
     char value[64];
-    bool is_worldspawn = false;
-    bool has_name = false;
-    char found[BSP_MAP_NAME_SIZE] = { 0 };
 
-    while (ReadQuoted(&cursor, end, key, sizeof(key)) &&
-           ReadQuoted(&cursor, end, value, sizeof(value)))
-    {
-        if (strcmp(key, "classname") == 0 && strcmp(value, "worldspawn") == 0)
-            is_worldspawn = true;
-
-        if (strcmp(key, "mapname") == 0 && value[0] != '\0')
-        {
-            snprintf(found, sizeof(found), "%s", value);
-            has_name = true;
-        }
-    }
-
-    if (!is_worldspawn || !has_name)
+    if (!out || size <= 0 || !FindEntityByClass(map, "worldspawn", 0, &start, &end))
         return false;
 
-    snprintf(out, (size_t)size, "%s", found);
+    if (!ValueForKey(start, end, "mapname", value, sizeof(value)) || value[0] == '\0')
+        return false;
+
+    snprintf(out, (size_t)size, "%s", value);
 
     return true;
 }
 
-bool BSP_GetMapName(const BSP_Map *map, char *out, int size)
+bool BSP_GetSkyName(const BSP_Map *map, char *out, int size)
 {
-    const char *cursor;
+    const char *start;
     const char *end;
+    char value[64];
 
-    if (!map || !map->entities || !out || size <= 0)
+    if (!out || size <= 0 || !FindEntityByClass(map, "worldspawn", 0, &start, &end))
         return false;
 
-    cursor = map->entities;
+    if (!ValueForKey(start, end, "skyname", value, sizeof(value)) || value[0] == '\0')
+        return false;
 
-    while (NextEntityBlock(&cursor, &end))
-    {
-        if (ParseMapNameBlock(cursor, end, out, size))
-            return true;
+    snprintf(out, (size_t)size, "%s", value);
 
-        cursor = end + 1;
-    }
+    return true;
+}
 
-    return false;
+static bool FindPlayerStart(const BSP_Map *map, float *x, float *y, float *z, float *angle)
+{
+    const char *start;
+    const char *end;
+    char value[64];
+    float pitch;
+    float roll;
+
+    if (!FindEntityByClass(map, "info_player_start", 0, &start, &end))
+        return false;
+
+    if (!ValueForKey(start, end, "origin", value, sizeof(value)))
+        return false;
+
+    if (sscanf(value, "%f %f %f", x, y, z) != 3)
+        return false;
+
+    *angle = 0.0f;
+
+    if (ValueForKey(start, end, "angles", value, sizeof(value)))
+        sscanf(value, "%f %f %f", &pitch, angle, &roll);
+    else if (ValueForKey(start, end, "angle", value, sizeof(value)))
+        sscanf(value, "%f", angle);
+
+    return true;
 }
 
 bool BSP_GetPlayerStart(const BSP_Map *map, float *x, float *y, float *z)
 {
-    float angle = 0.0f;
+    float angle;
 
     if (!x || !y || !z)
         return false;
@@ -720,9 +797,9 @@ bool BSP_GetPlayerStart(const BSP_Map *map, float *x, float *y, float *z)
 
 bool BSP_GetPlayerStartAngle(const BSP_Map *map, float *angle)
 {
-    float x = 0.0f;
-    float y = 0.0f;
-    float z = 0.0f;
+    float x;
+    float y;
+    float z;
 
     if (!angle)
         return false;

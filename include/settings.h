@@ -42,5 +42,6 @@ bool Settings_Stretch(void);
 float Settings_Fov(void);
 float Settings_Sensitivity(void);
 int Settings_MaxFps(void);
+bool Settings_Mipmaps(void);
 
 #endif

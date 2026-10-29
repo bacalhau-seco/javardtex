@@ -424,7 +424,7 @@ void Body_OnLand(Body *body)
     body->velocity.y *= scale;
 }
 
-void UpdatePlayer(const BSP_Map *map, Body *body, float rot, char side, char forward, bool jumpPressed, bool crouchHold, float delta)
+void PlayerMove(const BSP_Map *map, Body *body, float rot, char side, char forward, bool jumpPressed, bool crouchHold, float delta)
 {
     Vector2 input = { (float)side, (float)-forward };
     Vector3 front = { sinf(rot), -cosf(rot), 0.0f };

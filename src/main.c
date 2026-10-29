@@ -161,6 +161,170 @@ static bool LoadMap(const char *path)
     return true;
 }
 
+static void UpdateMouseMapping(void)
+{
+    const Rectangle dest = ScreenTargetDestination();
+
+    mouseScale.x = (dest.width > 0.0f) ? targetWidth / dest.width : 1.0f;
+    mouseScale.y = (dest.height > 0.0f) ? targetHeight / dest.height : 1.0f;
+
+    SetMouseOffset((int)-dest.x, (int)-dest.y);
+    SetMouseScale(mouseScale.x, mouseScale.y);
+}
+
+static void ApplyCursorMode(void)
+{
+    if (gameState != oldGameState)
+    {
+        switch (gameState)
+        {
+        case GAME_STATE_TITLE:
+        case GAME_STATE_MENU:
+        case GAME_STATE_PAUSE:
+            EnableCursor();
+            break;
+
+        case GAME_STATE_GAME:
+            DisableCursor();
+            ignoreMouseDelta = true;
+            break;
+        }
+
+        oldGameState = gameState;
+    }
+}
+
+static void RunState(InputState in, float delta)
+{
+    switch (gameState)
+    {
+    case GAME_STATE_TITLE:
+        if (newGameRequested)
+        {
+            newGameRequested = false;
+
+            if (LoadMap(args.mapPath))
+                gameState = GAME_STATE_GAME;
+        }
+        break;
+
+    case GAME_STATE_PAUSE:
+        if (IsKeyPressed(KEY_ESCAPE))
+            gameState = GAME_STATE_GAME;
+        break;
+
+    case GAME_STATE_MENU:
+        break;
+
+    case GAME_STATE_GAME:
+        if (IsKeyPressed(KEY_ESCAPE))
+        {
+            gameState = GAME_STATE_PAUSE;
+            World_Pause();
+            break;
+        }
+
+        if (ignoreMouseDelta)
+        {
+            in.mouse.x = 0;
+            in.mouse.y = 0;
+            ignoreMouseDelta = false;
+        }
+
+        if (mouseScale.x != 0.0f)
+            in.mouse.x /= mouseScale.x;
+
+        if (mouseScale.y != 0.0f)
+            in.mouse.y /= mouseScale.y;
+
+        lookRotation.x -= in.mouse.x * Settings_Sensitivity();
+        lookRotation.y += in.mouse.y * Settings_Sensitivity();
+        lookRotation.y = Clamp(lookRotation.y, -CAMERA_MAX_PITCH, CAMERA_MAX_PITCH);
+
+        World_Update(&bsp, in, lookRotation.x, delta);
+
+        {
+            Body view = World_ViewBody();
+
+            Camera_Update(&camera, &view, lookRotation);
+        }
+
+        char nextMap[BSP_MAP_NAME_SIZE];
+
+        if (!Collision_CheckNextLevel(&bsp, World_Body()->position, World_Body()->isCrouched, nextMap, (int)sizeof(nextMap)))
+        {
+            insideNextLevel = false;
+        }
+        else if (!insideNextLevel)
+        {
+            char nextPath[ARGS_MAP_PATH_MAX];
+
+            insideNextLevel = true;
+
+            if (Args_ResolveMapPath(nextPath, (int)sizeof(nextPath), nextMap))
+                LoadMap(nextPath);
+        }
+        break;
+    }
+}
+
+static void DrawWorldAndUi(float delta)
+{
+    BeginTextureMode(screenTarget);
+        ClearBackground(((gameState == GAME_STATE_GAME || gameState == GAME_STATE_PAUSE) && mapLoaded) ? skyColor : BLACK);
+
+        switch (gameState)
+        {
+        case GAME_STATE_TITLE:
+            Title_Draw();
+            break;
+
+        case GAME_STATE_PAUSE:
+            if (mapLoaded)
+            {
+                BeginMode3D(camera);
+                    BSP_Render(&bspRenderer, &bsp, camera, (float)targetWidth / (float)targetHeight);
+                EndMode3D();
+            }
+
+            Pause_Draw();
+            break;
+
+        case GAME_STATE_MENU:
+            Settings_Draw();
+            break;
+
+        case GAME_STATE_GAME:
+            if (mapLoaded)
+            {
+                BeginMode3D(camera);
+                    BSP_Render(&bspRenderer, &bsp, camera, (float)targetWidth / (float)targetHeight);
+                EndMode3D();
+
+                MapName_Draw(delta);
+            }
+            break;
+        }
+
+    EndTextureMode();
+}
+
+static void PresentFrame(void)
+{
+    BeginDrawing();
+        ClearBackground(BLACK);
+
+        DrawTexturePro(
+            screenTarget.texture,
+            (Rectangle){ 0.0f, 0.0f, (float)targetWidth, (float)-targetHeight },
+            ScreenTargetDestination(),
+            (Vector2){ 0.0f, 0.0f },
+            0.0f,
+            WHITE
+        );
+    EndDrawing();
+}
+
 int main(int argc, char **argv)
 {
 
@@ -201,160 +365,15 @@ int main(int argc, char **argv)
     {
         UpdateTargetFps();
         UpdateScreenTarget();
-
-        {
-            const Rectangle dest = ScreenTargetDestination();
-
-            mouseScale.x = (dest.width > 0.0f) ? targetWidth / dest.width : 1.0f;
-            mouseScale.y = (dest.height > 0.0f) ? targetHeight / dest.height : 1.0f;
-
-            SetMouseOffset((int)-dest.x, (int)-dest.y);
-            SetMouseScale(mouseScale.x, mouseScale.y);
-        }
-
-        if (gameState != oldGameState)
-        {
-            switch (gameState)
-            {
-            case GAME_STATE_TITLE:
-            case GAME_STATE_MENU:
-            case GAME_STATE_PAUSE:
-                EnableCursor();
-                break;
-
-            case GAME_STATE_GAME:
-                DisableCursor();
-                ignoreMouseDelta = true;
-                break;
-            }
-
-            oldGameState = gameState;
-        }
+        UpdateMouseMapping();
+        ApplyCursorMode();
 
         InputState in = GetInputState();
         const float delta = GetFrameTime();
 
-        switch (gameState)
-        {
-        case GAME_STATE_TITLE:
-            if (newGameRequested)
-            {
-                newGameRequested = false;
-
-                if (LoadMap(args.mapPath))
-                    gameState = GAME_STATE_GAME;
-            }
-            break;
-
-        case GAME_STATE_PAUSE:
-            if (IsKeyPressed(KEY_ESCAPE))
-                gameState = GAME_STATE_GAME;
-            break;
-
-        case GAME_STATE_MENU:
-            break;
-
-        case GAME_STATE_GAME:
-            if (IsKeyPressed(KEY_ESCAPE))
-            {
-                gameState = GAME_STATE_PAUSE;
-                World_Pause();
-                break;
-            }
-
-            if (ignoreMouseDelta)
-            {
-                in.mouse.x = 0;
-                in.mouse.y = 0;
-                ignoreMouseDelta = false;
-            }
-
-            if (mouseScale.x != 0.0f)
-                in.mouse.x /= mouseScale.x;
-
-            if (mouseScale.y != 0.0f)
-                in.mouse.y /= mouseScale.y;
-
-            lookRotation.x -= in.mouse.x * Settings_Sensitivity();
-            lookRotation.y += in.mouse.y * Settings_Sensitivity();
-            lookRotation.y = Clamp(lookRotation.y, -PI/2+0.001f, PI/2-0.001f);
-
-            World_Update(&bsp, in, lookRotation.x, delta);
-
-            {
-                Body view = World_ViewBody();
-
-                Camera_Update(&camera, &view, lookRotation);
-            }
-
-            char nextMap[BSP_MAP_NAME_SIZE];
-
-            if (!Collision_CheckNextLevel(&bsp, World_Body()->position, World_Body()->isCrouched, nextMap, (int)sizeof(nextMap)))
-            {
-                insideNextLevel = false;
-            }
-            else if (!insideNextLevel)
-            {
-                char nextPath[ARGS_MAP_PATH_MAX];
-
-                insideNextLevel = true;
-
-                if (Args_ResolveMapPath(nextPath, (int)sizeof(nextPath), nextMap))
-                    LoadMap(nextPath);
-            }
-            break;
-        }
-
-        BeginTextureMode(screenTarget);
-            ClearBackground(((gameState == GAME_STATE_GAME || gameState == GAME_STATE_PAUSE) && mapLoaded) ? skyColor : BLACK);
-
-            switch (gameState)
-            {
-            case GAME_STATE_TITLE:
-                Title_Draw();
-                break;
-
-            case GAME_STATE_PAUSE:
-                if (mapLoaded)
-                {
-                    BeginMode3D(camera);
-                        BSP_Render(&bspRenderer, &bsp, camera, (float)targetWidth / (float)targetHeight);
-                    EndMode3D();
-                }
-
-                Pause_Draw();
-                break;
-
-            case GAME_STATE_MENU:
-                Settings_Draw();
-                break;
-
-            case GAME_STATE_GAME:
-                if (mapLoaded)
-                {
-                    BeginMode3D(camera);
-                        BSP_Render(&bspRenderer, &bsp, camera, (float)targetWidth / (float)targetHeight);
-                    EndMode3D();
-
-                    MapName_Draw(delta);
-                }
-                break;
-            }
-
-        EndTextureMode();
-
-        BeginDrawing();
-            ClearBackground(BLACK);
-
-            DrawTexturePro(
-                screenTarget.texture,
-                (Rectangle){ 0.0f, 0.0f, (float)targetWidth, (float)-targetHeight },
-                ScreenTargetDestination(),
-                (Vector2){ 0.0f, 0.0f },
-                0.0f,
-                WHITE
-            );
-        EndDrawing();
+        RunState(in, delta);
+        DrawWorldAndUi(delta);
+        PresentFrame();
     }
 
     if (screenTarget.id != 0)

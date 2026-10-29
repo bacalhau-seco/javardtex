@@ -16,4 +16,4 @@ typedef struct {
     float stepViewOffset;
 } Body;
 
-void UpdatePlayer(const BSP_Map *map, Body *body, float rot, char side, char forward, bool jumpPressed, bool crouchHold, float delta);
+void PlayerMove(const BSP_Map *map, Body *body, float rot, char side, char forward, bool jumpPressed, bool crouchHold, float delta);

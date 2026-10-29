@@ -11,6 +11,7 @@
 #define BSP_MAX_TEXTURES 4096
 #define BSP_TEXTURE_NAME_SIZE 16
 #define BSP_MAP_NAME_SIZE 64
+#define BSP_PATH_SIZE 512
 #define BSP_CONTENTS_EMPTY -1
 #define BSP_CONTENTS_SOLID -2
 #define BSP_HULL_PLAYER 1
@@ -152,6 +153,8 @@ typedef struct {
 
     BSP_Texture *textures;
     int num_textures;
+
+    char path[BSP_PATH_SIZE];
 } BSP_Map;
 
 typedef char BSP_LayoutAssert[
@@ -183,10 +186,10 @@ typedef struct BSP_NextLevel
 
 bool BSP_GetPlayerStart(const BSP_Map *map, float *x, float *y, float *z);
 bool BSP_GetPlayerStartAngle(const BSP_Map *map, float *angle);
-bool BSP_GetNextLevel(const BSP_Map *map, BSP_NextLevel *out);
 bool BSP_GetNextLevelByIndex(const BSP_Map *map, int index, BSP_NextLevel *out);
 bool BSP_GetSunlightColor(const BSP_Map *map, unsigned char *r, unsigned char *g, unsigned char *b);
 bool BSP_GetMapName(const BSP_Map *map, char *out, int size);
+bool BSP_GetSkyName(const BSP_Map *map, char *out, int size);
 int BSP_FindLeaf(const BSP_Map *map, Vector3 position);
 bool BSP_DecompressVis(const BSP_Map *map, int leaf, uint8_t *out, int out_size);
 

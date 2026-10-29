@@ -4,6 +4,8 @@
 *.json
 *.map
 
+game/maps/*
+
 build/
 
 lib/libraylib.a

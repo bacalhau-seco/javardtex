@@ -73,7 +73,6 @@ float Cvar_Value(const char *name, float fallback)
 
 void Cvar_Init(void)
 {
-    Cvar_Register("tickrate", 128.0f);
 
     Cvar_Register("gravity", 800.0f);
     Cvar_Register("maxspeed", 290.0f);

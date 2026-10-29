@@ -1,9 +1,13 @@
 #include "../include/render.h"
 #include "../include/cvar.h"
+#include "../include/resource.h"
+#include "../include/settings.h"
 
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 
 #include <raylib.h>
 #include <raymath.h>
@@ -11,6 +15,7 @@
 
 #define DIFFUSE_TEXTURE_UNIT 0
 #define LIGHTMAP_TEXTURE_UNIT 1
+#define DETAIL_TEXTURE_UNIT 2
 
 static const char *LightmapVertexShader =
     "#version 330\n"
@@ -33,13 +38,16 @@ static const char *LightmapFragmentShader =
     "in vec2 fragLightmapCoord;\n"
     "uniform sampler2D texture0;\n"
     "uniform sampler2D lightmap;\n"
+    "uniform sampler2D detail;\n"
+    "uniform vec2 detailScale;\n"
     "out vec4 finalColor;\n"
     "void main()\n"
     "{\n"
     "    vec4 diffuse = texture(texture0, fragTexCoord);\n"
     "    if (diffuse.a < 0.5) discard;\n"
     "    vec3 light = texture(lightmap, fragLightmapCoord).rgb * 2.0;\n"
-    "    finalColor = vec4(diffuse.rgb * light, 1.0);\n"
+    "    vec3 detailColor = texture(detail, fragTexCoord * detailScale).rgb * 2.0;\n"
+    "    finalColor = vec4(diffuse.rgb * light * detailColor, 1.0);\n"
     "}\n";
 
 typedef struct {
@@ -50,14 +58,27 @@ typedef struct {
 
 static bool IsHiddenTexture(const char *name)
 {
-    return strncmp(name, "sky", 3) == 0
-        || strncmp(name, "clip", 4) == 0
-        || strncmp(name, "trigger", 7) == 0
-        || strncmp(name, "aaatrigger", 10) == 0
-        || strcmp(name, "null") == 0
-        || strcmp(name, "hint") == 0
-        || strcmp(name, "skip") == 0
-        || strcmp(name, "origin") == 0;
+    return strncasecmp(name, "sky", 3) == 0
+        || strncasecmp(name, "clip", 4) == 0
+        || strncasecmp(name, "trigger", 7) == 0
+        || strncasecmp(name, "aaatrigger", 10) == 0
+        || strcasecmp(name, "null") == 0
+        || strcasecmp(name, "hint") == 0
+        || strcasecmp(name, "skip") == 0
+        || strcasecmp(name, "origin") == 0;
+}
+
+static inline void ApplyTextureFilter(uint32_t id, bool mipmaps)
+{
+    if (id == 0)
+        return;
+
+    rlTextureParameters(id, RL_TEXTURE_MAG_FILTER, RL_TEXTURE_FILTER_NEAREST);
+    rlTextureParameters(
+        id,
+        RL_TEXTURE_MIN_FILTER,
+        mipmaps ? RL_TEXTURE_FILTER_NEAREST_MIP_LINEAR : RL_TEXTURE_FILTER_NEAREST
+    );
 }
 
 static uint32_t CreateTexture(const BSP_Texture *texture)
@@ -92,7 +113,8 @@ static uint32_t CreateTexture(const BSP_Texture *texture)
     if (gpu.id == 0)
         return 0;
 
-    SetTextureFilter(gpu, TEXTURE_FILTER_POINT);
+    GenTextureMipmaps(&gpu);
+    ApplyTextureFilter(gpu.id, Settings_Mipmaps());
 
     return gpu.id;
 }
@@ -136,7 +158,7 @@ static void AppendVertex(BSP_Batch *batch, const FaceContext *context, const Vec
     out->y = vertex->y;
     out->z = vertex->z;
     out->s = s / (float)context->texture->width;
-    out->t = -t / (float)context->texture->height;
+    out->t = t / (float)context->texture->height;
     out->lm_s = lm_s;
     out->lm_t = lm_t;
 }
@@ -298,6 +320,148 @@ static void CreateBatchTextures(BSP_Renderer *renderer, const BSP_Map *map)
 
         renderer->batches[i].texture_id = CreateTexture(texture);
     }
+
+    renderer->mipmaps = Settings_Mipmaps();
+}
+
+static void RefreshTextureFilters(BSP_Renderer *renderer)
+{
+    const bool mipmaps = Settings_Mipmaps();
+    int i;
+
+    if (renderer->mipmaps == mipmaps)
+        return;
+
+    renderer->mipmaps = mipmaps;
+
+    for (i = 0; i < renderer->num_batches; i++)
+        ApplyTextureFilter(renderer->batches[i].texture_id, mipmaps);
+}
+
+static uint32_t CreateNeutralDetailTexture(void)
+{
+    const Color neutral = { 128, 128, 128, 255 };
+    Image image = GenImageColor(1, 1, neutral);
+    Texture2D gpu = LoadTextureFromImage(image);
+
+    UnloadImage(image);
+
+    return gpu.id;
+}
+
+static uint32_t FindOrLoadDetailTexture(BSP_Renderer *renderer, const BSP_Map *map, const char *name)
+{
+    char relative[RESOURCE_PATH_SIZE];
+    char path[RESOURCE_PATH_SIZE];
+    Texture2D gpu;
+    int slot;
+    int i;
+
+    for (i = 0; i < renderer->num_detail_textures; i++)
+    {
+        if (strcmp(renderer->detail_paths[i], name) == 0)
+            return renderer->detail_ids[i];
+    }
+
+    if (renderer->num_detail_textures >= BSP_MAX_DETAIL_TEXTURES)
+        return 0;
+
+    snprintf(relative, sizeof(relative), "gfx/%s.tga", name);
+
+    if (!Resource_FindFile(map->path, relative, path, (int)sizeof(path)))
+    {
+        TraceLog(LOG_WARNING, "DETAIL: missing %s", relative);
+        return 0;
+    }
+
+    gpu = LoadTexture(path);
+
+    if (gpu.id == 0)
+    {
+        TraceLog(LOG_WARNING, "DETAIL: failed to load %s", path);
+        return 0;
+    }
+
+    GenTextureMipmaps(&gpu);
+    SetTextureFilter(gpu, TEXTURE_FILTER_TRILINEAR);
+    SetTextureWrap(gpu, TEXTURE_WRAP_REPEAT);
+
+    slot = renderer->num_detail_textures++;
+    renderer->detail_ids[slot] = gpu.id;
+    snprintf(renderer->detail_paths[slot], sizeof(renderer->detail_paths[slot]), "%s", name);
+
+    return gpu.id;
+}
+
+static void ApplyDetailLine(BSP_Renderer *renderer, const BSP_Map *map, const char *line)
+{
+    char texture[BSP_TEXTURE_NAME_SIZE];
+    char detail[64];
+    float xscale;
+    float yscale;
+    uint32_t detail_id;
+    int i;
+
+    if (sscanf(line, "%15s %63s %f %f", texture, detail, &xscale, &yscale) != 4)
+        return;
+
+    if (texture[0] == '/' || texture[0] == '#')
+        return;
+
+    if (xscale <= 0.0f || yscale <= 0.0f)
+        return;
+
+    detail_id = FindOrLoadDetailTexture(renderer, map, detail);
+
+    if (detail_id == 0)
+        return;
+
+    for (i = 0; i < map->num_textures && i < renderer->num_batches; i++)
+    {
+        if (strcasecmp(map->textures[i].name, texture) != 0)
+            continue;
+
+        renderer->batches[i].detail_id = detail_id;
+        renderer->batches[i].detail_scale[0] = xscale;
+        renderer->batches[i].detail_scale[1] = yscale;
+    }
+}
+
+static void LoadDetailTextures(BSP_Renderer *renderer, const BSP_Map *map)
+{
+    char base[BSP_MAP_NAME_SIZE];
+    char relative[RESOURCE_PATH_SIZE];
+    char path[RESOURCE_PATH_SIZE];
+    char line[256];
+    FILE *file;
+    int i;
+
+    renderer->neutral_detail_id = CreateNeutralDetailTexture();
+
+    for (i = 0; i < renderer->num_batches; i++)
+    {
+        renderer->batches[i].detail_id = renderer->neutral_detail_id;
+        renderer->batches[i].detail_scale[0] = 1.0f;
+        renderer->batches[i].detail_scale[1] = 1.0f;
+    }
+
+    if (!Resource_MapBaseName(map->path, base, (int)sizeof(base)))
+        return;
+
+    snprintf(relative, sizeof(relative), "maps/%s_detail.txt", base);
+
+    if (!Resource_FindFile(map->path, relative, path, (int)sizeof(path)))
+        return;
+
+    file = fopen(path, "r");
+
+    if (!file)
+        return;
+
+    while (fgets(line, sizeof(line), file))
+        ApplyDetailLine(renderer, map, line);
+
+    fclose(file);
 }
 
 static inline void BuildBatches(BSP_Renderer *renderer, const BSP_Map *map)
@@ -317,6 +481,8 @@ static bool LoadLightmapShader(BSP_Renderer *renderer)
 
     renderer->mvp_loc = GetShaderLocation(renderer->shader, "mvp");
     renderer->lightmap_loc = GetShaderLocation(renderer->shader, "lightmap");
+    renderer->detail_loc = GetShaderLocation(renderer->shader, "detail");
+    renderer->detail_scale_loc = GetShaderLocation(renderer->shader, "detailScale");
 
     return true;
 }
@@ -324,9 +490,11 @@ static bool LoadLightmapShader(BSP_Renderer *renderer)
 
 static void BindLightmapTexture(const BSP_Renderer *renderer)
 {
-    const int unit = LIGHTMAP_TEXTURE_UNIT;
+    const int lightmapUnit = LIGHTMAP_TEXTURE_UNIT;
+    const int detailUnit = DETAIL_TEXTURE_UNIT;
 
-    SetShaderValue(renderer->shader, renderer->lightmap_loc, &unit, SHADER_UNIFORM_INT);
+    SetShaderValue(renderer->shader, renderer->lightmap_loc, &lightmapUnit, SHADER_UNIFORM_INT);
+    SetShaderValue(renderer->shader, renderer->detail_loc, &detailUnit, SHADER_UNIFORM_INT);
 
     rlActiveTextureSlot(LIGHTMAP_TEXTURE_UNIT);
     rlEnableTexture(renderer->lightmap.texture_id);
@@ -345,6 +513,8 @@ bool BSP_RendererInit(BSP_Renderer *renderer, const BSP_Map *map)
         BSP_RendererShutdown(renderer);
         return false;
     }
+
+    Sky_Load(&renderer->sky, map);
 
     renderer->num_faces = map->num_faces;
     renderer->leaf_vis_size = (map->num_leaves + 7) / 8;
@@ -380,6 +550,7 @@ bool BSP_RendererInit(BSP_Renderer *renderer, const BSP_Map *map)
     renderer->num_batches = map->num_textures;
 
     CreateBatchTextures(renderer, map);
+    LoadDetailTextures(renderer, map);
     BuildBatches(renderer, map);
 
     if (!UploadBatches(renderer))
@@ -414,6 +585,17 @@ void BSP_RendererShutdown(BSP_Renderer *renderer)
         free(batch->vertices);
         free(batch->faces);
     }
+
+    for (i = 0; i < renderer->num_detail_textures; i++)
+    {
+        if (renderer->detail_ids[i])
+            rlUnloadTexture(renderer->detail_ids[i]);
+    }
+
+    if (renderer->neutral_detail_id)
+        rlUnloadTexture(renderer->neutral_detail_id);
+
+    Sky_Unload(&renderer->sky);
 
     free(renderer->batches);
     free(renderer->face_first);
@@ -610,6 +792,12 @@ static void DrawVisibleBatch(BSP_Renderer *renderer, const BSP_Batch *batch)
     if (batch->vao == 0 || batch->face_count == 0)
         return;
 
+    rlActiveTextureSlot(DETAIL_TEXTURE_UNIT);
+    rlEnableTexture(batch->detail_id ? batch->detail_id : renderer->neutral_detail_id);
+    rlActiveTextureSlot(DIFFUSE_TEXTURE_UNIT);
+
+    SetShaderValue(renderer->shader, renderer->detail_scale_loc, batch->detail_scale, SHADER_UNIFORM_VEC2);
+
     rlEnableTexture(batch->texture_id);
     rlEnableVertexArray(batch->vao);
 
@@ -660,10 +848,13 @@ void BSP_Render(BSP_Renderer *renderer, const BSP_Map *map, Camera camera, float
     renderer->drawn_faces = 0;
     renderer->draw_calls = 0;
 
+    RefreshTextureFilters(renderer);
+
     if (renderer->face_visible && renderer->num_faces > 0)
         MarkVisibleFaces(renderer, map, camera, aspect);
 
     rlDrawRenderBatchActive();
+    Sky_Draw(&renderer->sky, camera.position);
     rlEnableBackfaceCulling();
 
     BeginShaderMode(renderer->shader);
