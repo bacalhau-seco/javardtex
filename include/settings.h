@@ -21,7 +21,7 @@
 #define SETTINGS_TAB_WIDTH_PCT 0.14f
 #define SETTINGS_TAB_HEIGHT_PCT 0.045f
 #define SETTINGS_ASPECT_WIDTH_PCT 0.085f
-#define SETTINGS_TITLE_OFFSET_PCT 0.14f
+#define SETTINGS_PANEL_HEIGHT_PCT 0.48f
 #define SETTINGS_TABS_OFFSET_PCT 0.07f
 #define SETTINGS_STEPPER_WIDTH_SCALE 1.6f
 
@@ -43,5 +43,6 @@ float Settings_Fov(void);
 float Settings_Sensitivity(void);
 int Settings_MaxFps(void);
 bool Settings_Mipmaps(void);
+bool Settings_Vsync(void);
 
 #endif

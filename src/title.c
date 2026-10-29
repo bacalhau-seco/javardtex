@@ -80,6 +80,11 @@ float Menu_Height(float percent)
     return (float)GetRenderHeight() * percent;
 }
 
+float Menu_TitleY(void)
+{
+    return Menu_Height(UI_Get()->gameTitle.topPct);
+}
+
 void Menu_DrawText(Font font, const char *text, int centerX, int y, float size, Color color)
 {
     const Vector2 textSize = MeasureTextEx(font, text, size, 1.0f);
@@ -155,7 +160,7 @@ void Pause_Draw(void)
     const float menuHeight = buttonCount * buttonHeight + (buttonCount - 1) * buttonSpacing;
     const float menuY = centerY - menuHeight / 2.0f + titleOffset;
 
-    Menu_DrawText(Fonts_Get(FONT_MENU), ui->gameTitle.text, centerX, menuY - titleSize - titleOffset, titleSize, ui->gameTitle.color);
+    Menu_DrawText(Fonts_Get(FONT_MENU), ui->gameTitle.text, centerX, (int)Menu_TitleY(), titleSize, ui->gameTitle.color);
 
     DrawTextEx(
         Fonts_Get(FONT_UI),
@@ -235,7 +240,7 @@ void Title_Draw(void)
     const float menuHeight = buttonCount * buttonHeight + (buttonCount - 1) * buttonSpacing;
     const float menuY = centerY - menuHeight / 2.0f + titleOffset;
 
-    Menu_DrawText(Fonts_Get(FONT_MENU), ui->gameTitle.text, centerX, menuY - titleSize - titleOffset, titleSize, ui->gameTitle.color);
+    Menu_DrawText(Fonts_Get(FONT_MENU), ui->gameTitle.text, centerX, (int)Menu_TitleY(), titleSize, ui->gameTitle.color);
     DrawTextEx(
         Fonts_Get(FONT_UI),
         VERSION,

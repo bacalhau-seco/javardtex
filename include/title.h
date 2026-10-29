@@ -12,6 +12,7 @@
 #define MENU_BUTTON_TEXT_PCT 0.028f
 #define MENU_TITLE_TEXT_PCT 0.065f
 #define MENU_TITLE_OFFSET_PCT 0.06f
+#define MENU_TITLE_TOP_PCT 0.27f
 #define MENU_VERSION_TEXT_PCT 0.022f
 #define MENU_BORDER_PCT 0.0025f
 #define MENU_MARGIN_PCT 0.012f
@@ -21,6 +22,7 @@
 
 float Menu_Width(float percent);
 float Menu_Height(float percent);
+float Menu_TitleY(void);
 void Menu_DrawText(Font font, const char *text, int centerX, int y, float size, Color color);
 bool Menu_DrawButton(Rectangle button, const char *text);
 bool Menu_IsHovered(Rectangle button);

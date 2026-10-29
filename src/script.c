@@ -27,6 +27,7 @@ static UI_Config ui = {
         .text = GAMENAME,
         .textPct = MENU_TITLE_TEXT_PCT,
         .offsetPct = MENU_TITLE_OFFSET_PCT,
+        .topPct = MENU_TITLE_TOP_PCT,
         .color = { 0, 0, 0, 255 }
     },
     .mapTitle = {
@@ -50,7 +51,7 @@ static UI_Config ui = {
         .tabWidthPct = SETTINGS_TAB_WIDTH_PCT,
         .tabHeightPct = SETTINGS_TAB_HEIGHT_PCT,
         .aspectWidthPct = SETTINGS_ASPECT_WIDTH_PCT,
-        .titleOffsetPct = SETTINGS_TITLE_OFFSET_PCT,
+        .panelHeightPct = SETTINGS_PANEL_HEIGHT_PCT,
         .tabsOffsetPct = SETTINGS_TABS_OFFSET_PCT,
         .columnSpacingPct = MENU_MARGIN_PCT,
         .stepperWidthScale = SETTINGS_STEPPER_WIDTH_SCALE,
@@ -177,6 +178,7 @@ static void ReadGameTitleConfig(lua_State *state)
     ReadText(state, "text", ui.gameTitle.text, UI_TEXT_SIZE);
     ui.gameTitle.textPct = ReadNumber(state, "textSize", ui.gameTitle.textPct);
     ui.gameTitle.offsetPct = ReadNumber(state, "offset", ui.gameTitle.offsetPct);
+    ui.gameTitle.topPct = ReadNumber(state, "titleTop", ui.gameTitle.topPct);
     ui.gameTitle.color = ReadColor(state, "textColor", ui.gameTitle.color);
 
     lua_pop(state, 1);
@@ -221,7 +223,7 @@ static void ReadSettingsConfig(lua_State *state)
     ui.settings.tabWidthPct = ReadNumber(state, "tabWidth", ui.settings.tabWidthPct);
     ui.settings.tabHeightPct = ReadNumber(state, "tabHeight", ui.settings.tabHeightPct);
     ui.settings.aspectWidthPct = ReadNumber(state, "aspectWidth", ui.settings.aspectWidthPct);
-    ui.settings.titleOffsetPct = ReadNumber(state, "titleOffset", ui.settings.titleOffsetPct);
+    ui.settings.panelHeightPct = ReadNumber(state, "panelHeight", ui.settings.panelHeightPct);
     ui.settings.tabsOffsetPct = ReadNumber(state, "tabsOffset", ui.settings.tabsOffsetPct);
     ui.settings.columnSpacingPct = ReadNumber(state, "columnSpacing", ui.settings.columnSpacingPct);
     ui.settings.stepperWidthScale = ReadNumber(state, "stepperWidthScale", ui.settings.stepperWidthScale);

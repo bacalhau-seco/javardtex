@@ -6,6 +6,7 @@
 #include "bsp.h"
 
 #define WORLD_MAX_FRAME_DELTA 0.0625f
+#define WORLD_MAX_STEP_DELTA (1.0f / 120.0f)
 
 void World_Reset(Vector3 feet);
 void World_Pause(void);

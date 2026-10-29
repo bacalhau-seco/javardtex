@@ -31,6 +31,17 @@ static Vector2 mouseScale = { 1.0f, 1.0f };
 static void UpdateTargetFps(void)
 {
     static int appliedFps = 0;
+    static int appliedVsync = -1;
+
+    if (appliedVsync != (int)Settings_Vsync())
+    {
+        appliedVsync = (int)Settings_Vsync();
+
+        if (appliedVsync)
+            SetWindowState(FLAG_VSYNC_HINT);
+        else
+            ClearWindowState(FLAG_VSYNC_HINT);
+    }
 
     if (appliedFps == Settings_MaxFps())
         return;

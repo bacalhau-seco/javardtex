@@ -16,6 +16,7 @@ ui.gametitle = {
     text = "Unreal Engine",
     textSize = 0.1,
     offset = 0.06,
+    titleTop = 0.27,
     textColor = { 255, 255, 255, 255 }
 }
 
@@ -34,19 +35,19 @@ ui.version = {
 }
 
 ui.settings = {
-    rowHeight = 0.045,
-    rowSpacing = 0.010,
-    labelWidth = 0.18,
-    labelTextSize = 0.024,
-    keyWidth = 0.16,
-    tabWidth = 0.14,
-    tabHeight = 0.045,
-    aspectWidth = 0.085,
-    titleOffset = 0.14,
+    rowHeight = 0.038,
+    rowSpacing = 0.008,
+    labelWidth = 0.15,
+    labelTextSize = 0.020,
+    keyWidth = 0.13,
+    tabWidth = 0.12,
+    tabHeight = 0.038,
+    aspectWidth = 0.075,
+    panelHeight = 0.40,
     tabsOffset = 0.07,
     columnSpacing = 0.012,
     stepperWidthScale = 1.6,
-    labelColor = { 0, 0, 0, 255 }
+    labelColor = { 230, 230, 230, 255 }
 }
 
 ui.uifont = {

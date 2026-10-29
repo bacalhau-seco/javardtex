@@ -21,6 +21,9 @@ void World_Pause(void)
 
 void World_Update(const BSP_Map *map, InputState input, float yaw, float delta)
 {
+    int steps;
+    float step;
+
     if (input.jump)
         jumpQueued = true;
 
@@ -30,9 +33,15 @@ void World_Update(const BSP_Map *map, InputState input, float yaw, float delta)
     if (delta > WORLD_MAX_FRAME_DELTA)
         delta = WORLD_MAX_FRAME_DELTA;
 
-    PlayerMove(map, &body, yaw, input.side, input.forward, jumpQueued, input.crouch, delta);
+    steps = (int)(delta / WORLD_MAX_STEP_DELTA) + 1;
+    step = delta / (float)steps;
 
-    jumpQueued = false;
+    while (steps-- > 0)
+    {
+        PlayerMove(map, &body, yaw, input.side, input.forward, jumpQueued, input.crouch, step);
+
+        jumpQueued = false;
+    }
 }
 
 const Body *World_Body(void)

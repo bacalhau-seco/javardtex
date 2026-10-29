@@ -74,6 +74,8 @@ static float fieldOfView = 90.0f;
 static float sensitivity = 0.001f;
 static int maxFps = 90;
 static bool mipmaps = true;
+static bool vsync = false;
+static float rowsScroll = 0.0f;
 
 int Settings_NativeWidth(void)
 {
@@ -124,6 +126,11 @@ bool Settings_Mipmaps(void)
     return mipmaps;
 }
 
+bool Settings_Vsync(void)
+{
+    return vsync;
+}
+
 void Settings_Init(void)
 {
     const int refresh = GetMonitorRefreshRate(GetCurrentMonitor());
@@ -158,7 +165,12 @@ static void RebuildVisibleResolutions(void)
 
 static inline int RowsCount(void)
 {
-    return (activeTab == SETTINGS_TAB_CONTROLS) ? BIND_COUNT + 1 : visibleCount + 6;
+    return (activeTab == SETTINGS_TAB_CONTROLS) ? BIND_COUNT + 1 : visibleCount + 9;
+}
+
+static inline float RowStep(void)
+{
+    return Menu_Height(UiSettings()->rowHeightPct + UiSettings()->rowSpacingPct);
 }
 
 static int DrawStepperRow(const char *label, const char *value, int centerX, int y)
@@ -195,9 +207,45 @@ static int DrawStepperRow(const char *label, const char *value, int centerX, int
     return delta;
 }
 
+static int DrawStackedStepperRow(const char *label, const char *value, int centerX, int y)
+{
+    const float height = Menu_Height(UiSettings()->rowHeightPct);
+    const float stepWidth = height * UiSettings()->stepperWidthScale;
+    const float valueWidth = Menu_Width(UiSettings()->keyWidthPct);
+    const float spacing = Menu_Width(UiSettings()->columnSpacingPct);
+    const float totalWidth = stepWidth * 2.0f + valueWidth + spacing * 2.0f;
+    const float startX = centerX - totalWidth / 2.0f;
+    const float controlsY = y + RowStep();
+
+    const Rectangle minus = { startX, controlsY, stepWidth, height };
+    const Rectangle valueBox = { startX + stepWidth + spacing, controlsY, valueWidth, height };
+    const Rectangle plus = { startX + stepWidth + valueWidth + spacing * 2.0f, controlsY, stepWidth, height };
+
+    int delta = 0;
+
+    Menu_DrawText(
+        Fonts_Get(FONT_UI),
+        label,
+        centerX,
+        y + (int)((height - Menu_Height(UiSettings()->labelTextPct)) / 2.0f),
+        Menu_Height(UiSettings()->labelTextPct),
+        UiSettings()->labelColor
+    );
+
+    if (Menu_DrawButton(minus, "-"))
+        delta--;
+
+    Menu_DrawButton(valueBox, value);
+
+    if (Menu_DrawButton(plus, "+"))
+        delta++;
+
+    return delta;
+}
+
 static void DrawFovRow(int centerX, int y)
 {
-    const int delta = DrawStepperRow("FOV", TextFormat("%d", (int)(fieldOfView + 0.5f)), centerX, y);
+    const int delta = DrawStackedStepperRow("FOV", TextFormat("%d", (int)(fieldOfView + 0.5f)), centerX, y);
 
     if (delta != 0)
         fieldOfView = Clamp(fieldOfView + delta * SETTINGS_FOV_STEP, SETTINGS_FOV_MIN, SETTINGS_FOV_MAX);
@@ -205,10 +253,25 @@ static void DrawFovRow(int centerX, int y)
 
 static void DrawFpsRow(int centerX, int y)
 {
-    const int delta = DrawStepperRow("MAX FPS", TextFormat("%d", maxFps), centerX, y);
+    const int delta = DrawStackedStepperRow("MAX FPS", TextFormat("%d", maxFps), centerX, y);
 
     if (delta != 0)
         maxFps = (int)Clamp((float)(maxFps + delta * SETTINGS_FPS_STEP), SETTINGS_FPS_MIN, SETTINGS_FPS_MAX);
+}
+
+static void DrawVsyncRow(int centerX, int y)
+{
+    const Rectangle button = {
+        centerX - Menu_Width(UiButton()->widthPct) / 2.0f,
+        y,
+        Menu_Width(UiButton()->widthPct),
+        Menu_Height(UiSettings()->rowHeightPct)
+    };
+
+    if (!Menu_DrawButton(button, vsync ? "VSYNC: ON" : "VSYNC: OFF"))
+        return;
+
+    vsync = !vsync;
 }
 
 static void DrawSensitivityRow(int centerX, int y)
@@ -373,14 +436,62 @@ static void DrawTabs(int centerX, int y)
 
         capturingBind = -1;
         activeTab = (SettingsTab)i;
+        rowsScroll = 0.0f;
     }
+}
+
+static inline float TabsY(void)
+{
+    return Menu_TitleY() + Menu_Height(UI_Get()->gameTitle.textPct) + Menu_Height(UiSettings()->tabsOffsetPct);
+}
+
+static inline float PanelTop(void)
+{
+    return floorf(TabsY() + Menu_Height(UiSettings()->tabHeightPct + UiSettings()->rowSpacingPct * 2.0f));
+}
+
+static inline float PanelHeight(void)
+{
+    const float reserved = Menu_Height(UiButton()->spacingPct * 2.0f + UiButton()->heightPct + UiSettings()->rowSpacingPct);
+    const float available = (float)GetRenderHeight() - PanelTop() - reserved;
+    const float wanted = Menu_Height(UiSettings()->panelHeightPct);
+
+    return floorf(wanted < available ? wanted : available);
+}
+
+static inline float PanelBottom(void)
+{
+    return PanelTop() + PanelHeight();
+}
+
+static inline float RowsContentHeight(void)
+{
+    return RowsCount() * RowStep();
+}
+
+static inline float RowsMaxScroll(void)
+{
+    const float overflow = RowsContentHeight() - PanelHeight();
+
+    return overflow > 0.0f ? overflow : 0.0f;
+}
+
+static void UpdateRowsScroll(void)
+{
+    if (capturingBind < 0)
+        rowsScroll -= GetMouseWheelMove() * RowStep();
+
+    rowsScroll = Clamp(rowsScroll, 0.0f, RowsMaxScroll());
+}
+
+static inline bool RowVisible(float y, float height)
+{
+    return y >= PanelTop() && y + height <= PanelBottom();
 }
 
 static inline int RowsTop(void)
 {
-    const float rowsHeight = RowsCount() * Menu_Height(UiSettings()->rowHeightPct + UiSettings()->rowSpacingPct);
-
-    return (int)(GetRenderHeight() / 2.0f - rowsHeight / 2.0f);
+    return (int)(PanelTop() - rowsScroll);
 }
 
 static void UpdateCapture(void)
@@ -473,6 +584,7 @@ void Settings_OpenFrom(GameState back)
     captureCancelled = false;
     returnState = back;
     activeTab = SETTINGS_TAB_VIDEO;
+    rowsScroll = 0.0f;
 
     RebuildVisibleResolutions();
 }
@@ -482,13 +594,12 @@ void Settings_Draw(void)
     const int centerX = GetRenderWidth() / 2;
     const int top = RowsTop();
 
-    const int rows = RowsCount();
-
-    const float rowStep = Menu_Height(UiSettings()->rowHeightPct + UiSettings()->rowSpacingPct);
+    const float rowStep = RowStep();
+    const float panelTop = PanelTop();
 
     const Rectangle backButton = {
         centerX - Menu_Width(UiButton()->widthPct) / 2.0f,
-        top + rows * rowStep + Menu_Height(UiButton()->spacingPct * 2.0f),
+        PanelBottom() + Menu_Height(UiButton()->spacingPct * 2.0f),
         Menu_Width(UiButton()->widthPct),
         Menu_Height(UiButton()->heightPct)
     };
@@ -496,31 +607,56 @@ void Settings_Draw(void)
     int i;
 
     UpdateCapture();
+    UpdateRowsScroll();
 
-    Menu_DrawText(Fonts_Get(FONT_MENU), "SETTINGS", centerX, top - (int)Menu_Height(UiSettings()->titleOffsetPct), Menu_Height(UI_Get()->gameTitle.textPct), UI_Get()->gameTitle.color);
+    Menu_DrawText(Fonts_Get(FONT_MENU), "SETTINGS", centerX, (int)Menu_TitleY(), Menu_Height(UI_Get()->gameTitle.textPct), UI_Get()->gameTitle.color);
 
-    DrawTabs(centerX, top - (int)Menu_Height(UiSettings()->tabsOffsetPct));
+    DrawTabs(centerX, (int)TabsY());
+
+    BeginScissorMode(0, (int)panelTop, GetRenderWidth(), (int)PanelHeight());
 
     if (activeTab == SETTINGS_TAB_CONTROLS)
     {
         for (i = 0; i < BIND_COUNT; i++)
-            DrawBindRow(i, centerX, (int)(top + i * rowStep));
+        {
+            if (RowVisible(top + i * rowStep, rowStep))
+                DrawBindRow(i, centerX, (int)(top + i * rowStep));
+        }
 
-        DrawSensitivityRow(centerX, (int)(top + BIND_COUNT * rowStep));
+        if (RowVisible(top + BIND_COUNT * rowStep, rowStep))
+            DrawSensitivityRow(centerX, (int)(top + BIND_COUNT * rowStep));
     }
     else
     {
-        DrawAspectRow(centerX, top);
+        if (RowVisible(top, rowStep))
+            DrawAspectRow(centerX, top);
 
         for (i = 0; i < visibleCount; i++)
-            DrawResolutionRow(i, centerX, (int)(top + (i + 1) * rowStep));
+        {
+            if (RowVisible(top + (i + 1) * rowStep, rowStep))
+                DrawResolutionRow(i, centerX, (int)(top + (i + 1) * rowStep));
+        }
 
-        DrawNativeRow(centerX, (int)(top + (visibleCount + 1) * rowStep));
-        DrawScalingRow(centerX, (int)(top + (visibleCount + 2) * rowStep));
-        DrawFovRow(centerX, (int)(top + (visibleCount + 3) * rowStep));
-        DrawFpsRow(centerX, (int)(top + (visibleCount + 4) * rowStep));
-        DrawMipmapsRow(centerX, (int)(top + (visibleCount + 5) * rowStep));
+        if (RowVisible(top + (visibleCount + 1) * rowStep, rowStep))
+            DrawNativeRow(centerX, (int)(top + (visibleCount + 1) * rowStep));
+
+        if (RowVisible(top + (visibleCount + 2) * rowStep, rowStep))
+            DrawScalingRow(centerX, (int)(top + (visibleCount + 2) * rowStep));
+
+        if (RowVisible(top + (visibleCount + 3) * rowStep, 2.0f * rowStep))
+            DrawFovRow(centerX, (int)(top + (visibleCount + 3) * rowStep));
+
+        if (RowVisible(top + (visibleCount + 5) * rowStep, 2.0f * rowStep))
+            DrawFpsRow(centerX, (int)(top + (visibleCount + 5) * rowStep));
+
+        if (RowVisible(top + (visibleCount + 7) * rowStep, rowStep))
+            DrawMipmapsRow(centerX, (int)(top + (visibleCount + 7) * rowStep));
+
+        if (RowVisible(top + (visibleCount + 8) * rowStep, rowStep))
+            DrawVsyncRow(centerX, (int)(top + (visibleCount + 8) * rowStep));
     }
+
+    EndScissorMode();
 
     if (!Menu_DrawButton(backButton, "BACK"))
         return;

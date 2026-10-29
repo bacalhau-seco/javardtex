@@ -26,6 +26,7 @@ typedef struct {
     char text[UI_TEXT_SIZE];
     float textPct;
     float offsetPct;
+    float topPct;
     Color color;
 } UI_GameTitleConfig;
 
@@ -52,7 +53,7 @@ typedef struct {
     float tabWidthPct;
     float tabHeightPct;
     float aspectWidthPct;
-    float titleOffsetPct;
+    float panelHeightPct;
     float tabsOffsetPct;
     float columnSpacingPct;
     float stepperWidthScale;
