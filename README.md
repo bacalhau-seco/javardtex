@@ -1,5 +1,5 @@
 # javardtex
-Simple goldsrc-like game engine. Goal is to make simple singleplayer and multiplayer games.
+Simple quake-like game engine. Goal is to make simple singleplayer and multiplayer games.
 
 ## Why the rewrite?
 I started this in June 2026 but ended up using AI for the renderer, and from there I kinda got lost and felt like I wasn't learning anything
@@ -13,6 +13,13 @@ Just engine code. Actual game assets will not be present on this.
 - wad3 (valve)
 - guns
 - ez to make games
+
+## Things it won't have (probably)
+- console commands
+- CVARs
+- culling
+- real time lightning
+- realistic physics
 
 ## Goals:
 - NO AI CODE
