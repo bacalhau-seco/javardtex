@@ -641,62 +641,59 @@ static int ClampColorComponent(int value)
     return value;
 }
 
-static bool ParseNextLevel(const BSP_Map *map, const char *start, const char *end, BSP_NextLevel *out)
+bool BSP_GetEntity(const BSP_Map *map, int index, BSP_Entity *out)
 {
-    char value[64];
-    Vector3 offset = { 0.0f, 0.0f, 0.0f };
-    int model = -1;
-
-    if (!ValueForKey(start, end, "map", value, sizeof(value)) || value[0] == '\0')
-        return false;
-
-    snprintf(out->map, sizeof(out->map), "%s", value);
-
-    if (!ValueForKey(start, end, "model", value, sizeof(value)) || value[0] != '*')
-        return false;
-
-    if (sscanf(value + 1, "%d", &model) != 1)
-        return false;
-
-    if (!map->models || model < 0 || model >= map->num_models)
-        return false;
-
-    if (ValueForKey(start, end, "origin", value, sizeof(value)))
-        sscanf(value, "%f %f %f", &offset.x, &offset.y, &offset.z);
-
-    out->mins = Vector3Add(map->models[model].mins, offset);
-    out->maxs = Vector3Add(map->models[model].maxs, offset);
-
-    return true;
-}
-
-bool BSP_GetNextLevelByIndex(const BSP_Map *map, int index, BSP_NextLevel *out)
-{
-    const char *start;
-    const char *end;
-    BSP_NextLevel found;
+    const char *cursor;
+    const char *blockEnd;
     int matches = 0;
-    int i;
 
-    if (!out || index < 0)
+    if (!map || !map->entities || !out || index < 0)
         return false;
 
-    for (i = 0; FindEntityByClass(map, "func_next_level", i, &start, &end); i++)
-    {
-        if (!ParseNextLevel(map, start, end, &found))
-            continue;
+    cursor = map->entities;
 
+    while (NextEntity(&cursor, &blockEnd))
+    {
         if (matches == index)
         {
-            *out = found;
+            char value[BSP_ENTITY_VALUE_SIZE];
+
+            out->start = cursor;
+            out->end = blockEnd;
+            out->origin = (Vector3){ 0.0f, 0.0f, 0.0f };
+            out->model = -1;
+            out->classname[0] = '\0';
+
+            if (ValueForKey(cursor, blockEnd, "classname", value, sizeof(value)))
+                snprintf(out->classname, sizeof(out->classname), "%s", value);
+
+            if (ValueForKey(cursor, blockEnd, "origin", value, sizeof(value)))
+                sscanf(value, "%f %f %f", &out->origin.x, &out->origin.y, &out->origin.z);
+
+            if (ValueForKey(cursor, blockEnd, "model", value, sizeof(value)) && value[0] == '*')
+            {
+                int model = -1;
+
+                if (sscanf(value + 1, "%d", &model) == 1 && model >= 0 && model < map->num_models)
+                    out->model = model;
+            }
 
             return true;
         }
 
         matches++;
+        cursor = blockEnd + 1;
     }
 
     return false;
+}
+
+bool BSP_EntityValue(const BSP_Entity *entity, const char *key, char *out, int size)
+{
+    if (!entity || !entity->start || !entity->end || !out || size <= 0)
+        return false;
+
+    return ValueForKey(entity->start, entity->end, key, out, size);
 }
 
 bool BSP_GetSunlightColor(const BSP_Map *map, unsigned char *r, unsigned char *g, unsigned char *b)

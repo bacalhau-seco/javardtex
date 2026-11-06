@@ -79,12 +79,12 @@ void Cvar_Init(void)
     Cvar_Register("jumpforce", 270.0f);
     Cvar_Register("friction", 4.0f);
     Cvar_Register("stopspeed", 100.0f);
-    Cvar_Register("standheight", 72.0f);
-    Cvar_Register("crouchheight", 36.0f);
+    Cvar_Register("crouchspeedscale", 0.333f);
+    Cvar_Register("maxvelocity", 2000.0f);
     Cvar_Register("accel", 5.0f);
     Cvar_Register("airaccel", 100.0f);
     Cvar_Register("airwishcap", 30.0f);
     Cvar_Register("jumppenalty", 0.0f);
-    Cvar_Register("stepheight", 16.0f);
+    Cvar_Register("stepheight", 18.0f);
     Cvar_Register("stepsmooth", 150.0f);
 }

@@ -199,6 +199,26 @@ static void SlideMove(const BSP_Map *map, Body *body, float delta)
         planes[numPlanes] = trace.normal;
         numPlanes++;
 
+        if (!body->isGrounded)
+        {
+            /* GoldSrc PM_FlyMove: airborne moves reclip the original velocity
+             * through every plane instead of using the crease solver, which is
+             * what keeps speed while sliding along surf ramps. */
+            Vector3 clipped = originalVelocity;
+
+            for (i = 0; i < numPlanes; i++)
+            {
+                clipped = ClipVelocity(originalVelocity, planes[i], 1.0f);
+
+                if (planes[i].z > MOVE_GROUND_NORMAL)
+                    originalVelocity = clipped;
+            }
+
+            body->velocity = clipped;
+            originalVelocity = clipped;
+            continue;
+        }
+
         for (i = 0; i < numPlanes; i++)
         {
             Vector3 clipped = ClipVelocity(originalVelocity, planes[i], 1.0f);
@@ -240,7 +260,7 @@ static void SlideMove(const BSP_Map *map, Body *body, float delta)
 
 static void StayOnGround(const BSP_Map *map, Body *body)
 {
-    float stepHeight = Cvar_Value("stepheight", 16.0f);
+    float stepHeight = Cvar_Value("stepheight", 18.0f);
     Collision_TraceResult up;
     Collision_TraceResult down;
     Vector3 start = body->position;
@@ -264,7 +284,7 @@ static void StayOnGround(const BSP_Map *map, Body *body)
 
 static void DecayStepViewOffset(Body *body, float delta)
 {
-    float limit = Cvar_Value("stepheight", 16.0f) + MOVE_GROUND_CHECK;
+    float limit = Cvar_Value("stepheight", 18.0f) + MOVE_GROUND_CHECK;
     float move = Cvar_Value("stepsmooth", 150.0f) * delta;
 
     if (body->stepViewOffset > limit)
@@ -281,7 +301,27 @@ static void DecayStepViewOffset(Body *body, float delta)
         body->stepViewOffset = 0.0f;
 }
 
-static void ApplyFriction(Body *body, bool crouchHold, float delta)
+static inline float ClampAxis(float value, float max)
+{
+    if (value > max)
+        return max;
+
+    if (value < -max)
+        return -max;
+
+    return value;
+}
+
+static void ClampVelocity(Body *body)
+{
+    float max = Cvar_Value("maxvelocity", 2000.0f);
+
+    body->velocity.x = ClampAxis(body->velocity.x, max);
+    body->velocity.y = ClampAxis(body->velocity.y, max);
+    body->velocity.z = ClampAxis(body->velocity.z, max);
+}
+
+static void ApplyFriction(Body *body, float delta)
 {
     float speed = HorizontalSpeed(body->velocity);
     float stopSpeed = Cvar_Value("stopspeed", 100.0f);
@@ -292,9 +332,6 @@ static void ApplyFriction(Body *body, bool crouchHold, float delta)
 
     if (speed <= 0.001f)
         return;
-
-    if (crouchHold)
-        friction *= 2.0f;
 
     control = speed < stopSpeed ? stopSpeed : speed;
     newSpeed = speed - delta * control * friction;
@@ -325,7 +362,7 @@ static void Accelerate(Body *body, Vector3 wishDir, float wishSpeed, float accel
 
 static void WalkMove(const BSP_Map *map, Body *body, float delta)
 {
-    float stepHeight = Cvar_Value("stepheight", 16.0f);
+    float stepHeight = Cvar_Value("stepheight", 18.0f);
     Collision_TraceResult trace;
     Vector3 original;
     Vector3 originalVelocity;
@@ -447,6 +484,10 @@ void PlayerMove(const BSP_Map *map, Body *body, float rot, char side, char forwa
     body->dir = Vector3Normalize(wish);
     wishSpeed = Vector3Length(body->dir) * Cvar_Value("maxspeed", 290.0f);
 
+    if (body->isCrouched)
+        wishSpeed *= Cvar_Value("crouchspeedscale", 0.333f);
+
+    ClampVelocity(body);
     CategorizePosition(map, body);
 
     wasGrounded = body->isGrounded;
@@ -461,7 +502,7 @@ void PlayerMove(const BSP_Map *map, Body *body, float rot, char side, char forwa
     {
         body->velocity.z = 0.0f;
 
-        ApplyFriction(body, crouchHold, delta);
+        ApplyFriction(body, delta);
         Accelerate(body, body->dir, wishSpeed, Cvar_Value("accel", 5.0f) * wishSpeed * delta);
         WalkMove(map, body, delta);
     }

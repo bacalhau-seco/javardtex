@@ -1,5 +1,6 @@
 #include "../include/world.h"
 #include "../include/collision.h"
+#include "../include/entity.h"
 
 static Body body = { 0 };
 static bool jumpQueued = false;
@@ -42,6 +43,8 @@ void World_Update(const BSP_Map *map, InputState input, float yaw, float delta)
 
         jumpQueued = false;
     }
+
+    Entity_Update(map, body.position, body.isCrouched, delta);
 }
 
 const Body *World_Body(void)

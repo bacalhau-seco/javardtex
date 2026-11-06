@@ -11,6 +11,8 @@
 #define BSP_MAX_TEXTURES 4096
 #define BSP_TEXTURE_NAME_SIZE 16
 #define BSP_MAP_NAME_SIZE 64
+#define BSP_ENTITY_VALUE_SIZE 1024
+#define BSP_CLASSNAME_SIZE 64
 #define BSP_PATH_SIZE 512
 #define BSP_CONTENTS_EMPTY -1
 #define BSP_CONTENTS_SOLID -2
@@ -177,16 +179,22 @@ int BSP_GetFaceVertices(const BSP_Map *map, const BSP_Face *face, Vector3 *out);
 
 void BSP_GetTexCoord(const BSP_TexInfo *texinfo, const Vector3 *vertex, float *s, float *t);
 
-typedef struct BSP_NextLevel
+/* One entity block of the entities lump. `start`/`end` point into
+ * BSP_Map.entities and stay valid while the map is loaded. */
+typedef struct BSP_Entity
 {
-    char map[BSP_MAP_NAME_SIZE];
-    Vector3 mins;
-    Vector3 maxs;
-} BSP_NextLevel;
+    char classname[BSP_CLASSNAME_SIZE];
+    Vector3 origin;
+    int model; /* brush model index from "model" "*N", -1 when absent */
+    const char *start;
+    const char *end;
+} BSP_Entity;
+
+bool BSP_GetEntity(const BSP_Map *map, int index, BSP_Entity *out);
+bool BSP_EntityValue(const BSP_Entity *entity, const char *key, char *out, int size);
 
 bool BSP_GetPlayerStart(const BSP_Map *map, float *x, float *y, float *z);
 bool BSP_GetPlayerStartAngle(const BSP_Map *map, float *angle);
-bool BSP_GetNextLevelByIndex(const BSP_Map *map, int index, BSP_NextLevel *out);
 bool BSP_GetSunlightColor(const BSP_Map *map, unsigned char *r, unsigned char *g, unsigned char *b);
 bool BSP_GetMapName(const BSP_Map *map, char *out, int size);
 bool BSP_GetSkyName(const BSP_Map *map, char *out, int size);

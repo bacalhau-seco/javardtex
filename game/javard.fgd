@@ -35,3 +35,20 @@
     mangle(string) : "Direction (yaw pitch roll)" : "0 -90 0"
     angle(integer) : "Cone angle" : 40
 ]
+
+
+@SolidClass color(255 128 128) = trigger_once : "Fires its target once when the player touches it"
+[
+    targetname(target_source) : "Name"
+    target(target_destination) : "Target to fire"
+    delay(string) : "Delay before firing" : "0"
+]
+
+
+@SolidClass color(255 160 0) = trigger_multiple : "Fires its target every time the player touches it"
+[
+    targetname(target_source) : "Name"
+    target(target_destination) : "Target to fire"
+    delay(string) : "Delay before firing" : "0"
+    wait(string) : "Seconds before it can fire again" : "0.2"
+]

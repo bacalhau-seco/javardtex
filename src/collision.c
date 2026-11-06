@@ -1,11 +1,9 @@
 #include "../include/collision.h"
-#include "../include/cvar.h"
 
 #include "raymath.h"
 
 #include <stdio.h>
 
-#define COLLISION_PLAYER_HALF_WIDTH 16.0f
 #define COLLISION_DIST_EPSILON 0.03125f
 #define COLLISION_TRACE_BUMPS 0.1f
 #define COLLISION_MAX_TRACE_DEPTH 256
@@ -17,16 +15,14 @@ static inline float PlaneDistance(const BSP_Plane *plane, Vector3 p)
 
 float Collision_PlayerHeight(bool crouched)
 {
-    return crouched
-        ? Cvar_Value("crouchheight", 36.0f)
-        : Cvar_Value("standheight", 72.0f);
+    return crouched ? COLLISION_CROUCH_HEIGHT : COLLISION_STAND_HEIGHT;
 }
 
 float Collision_EyeHeight(bool crouched)
 {
-    float height = Collision_PlayerHeight(crouched);
-
-    return height - height / 5.0f;
+    /* GoldSrc view offset is relative to the hull centre (28 stand, 12 duck). */
+    return Collision_PlayerHeight(crouched) * 0.5f
+        + (crouched ? COLLISION_CROUCH_VIEW_OFFSET : COLLISION_VIEW_OFFSET);
 }
 
 static inline Vector3 Collision_FeetToOrigin(Vector3 feet, bool crouched)
@@ -58,36 +54,33 @@ bool Collision_GetSpawn(const BSP_Map *map, Vector3 *feet)
     return true;
 }
 
-bool Collision_CheckNextLevel(const BSP_Map *map, Vector3 feet, bool crouched, char *mapName, int mapNameSize)
+bool Collision_TouchesModel(const BSP_Map *map, int model, Vector3 modelOrigin, Vector3 feet, bool crouched)
 {
-    BSP_NextLevel next;
-    int index;
+    Vector3 center;
+    Vector3 mins;
+    Vector3 maxs;
+    float halfWidth = COLLISION_PLAYER_HALF_WIDTH;
+    float halfHeight;
 
-    if (!mapName || mapNameSize <= 0)
+    if (!map || !map->models || model < 0 || model >= map->num_models)
         return false;
 
-    Vector3 origin = Collision_FeetToOrigin(feet, crouched);
+    center = Collision_FeetToOrigin(feet, crouched);
+    halfHeight = Collision_PlayerHeight(crouched) * 0.5f;
 
-    const float halfWidth = COLLISION_PLAYER_HALF_WIDTH;
-    const float halfHeight = Collision_PlayerHeight(crouched) * 0.5f;
+    mins = Vector3Add(map->models[model].mins, modelOrigin);
+    maxs = Vector3Add(map->models[model].maxs, modelOrigin);
 
-    for (index = 0; BSP_GetNextLevelByIndex(map, index, &next); index++)
-    {
-        if (origin.x + halfWidth < next.mins.x || origin.x - halfWidth > next.maxs.x)
-            continue;
+    if (center.x + halfWidth < mins.x || center.x - halfWidth > maxs.x)
+        return false;
 
-        if (origin.y + halfWidth < next.mins.y || origin.y - halfWidth > next.maxs.y)
-            continue;
+    if (center.y + halfWidth < mins.y || center.y - halfWidth > maxs.y)
+        return false;
 
-        if (origin.z + halfHeight < next.mins.z || origin.z - halfHeight > next.maxs.z)
-            continue;
+    if (center.z + halfHeight < mins.z || center.z - halfHeight > maxs.z)
+        return false;
 
-        snprintf(mapName, (size_t)mapNameSize, "%s", next.map);
-
-        return true;
-    }
-
-    return false;
+    return true;
 }
 
 bool Collision_GetSpawnYaw(const BSP_Map *map, float *yaw)

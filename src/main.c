@@ -11,6 +11,7 @@
 #include "../include/args.h"
 #include "../include/script.h"
 #include "../include/world.h"
+#include "../include/entity.h"
 
 static BSP_Map bsp = { 0 };
 static BSP_Renderer bspRenderer = { 0 };
@@ -19,7 +20,6 @@ static Camera camera = { 0 };
 static Args args;
 static bool mapLoaded = false;
 static bool ignoreMouseDelta = false;
-static bool insideNextLevel = false;
 static Color skyColor = { 0, 0, 0, 255 };
 GameState gameState = GAME_STATE_TITLE;
 static GameState oldGameState = GAME_STATE_TITLE;
@@ -131,7 +131,8 @@ static bool LoadMap(const char *path)
     bsp = loaded;
     bspRenderer = loadedRenderer;
     mapLoaded = true;
-    insideNextLevel = true;
+
+    Entity_Load(&bsp);
 
     lookRotation.x = 0;
     lookRotation.y = 0;
@@ -262,15 +263,9 @@ static void RunState(InputState in, float delta)
 
         char nextMap[BSP_MAP_NAME_SIZE];
 
-        if (!Collision_CheckNextLevel(&bsp, World_Body()->position, World_Body()->isCrouched, nextMap, (int)sizeof(nextMap)))
-        {
-            insideNextLevel = false;
-        }
-        else if (!insideNextLevel)
+        if (Entity_TakeChangeLevel(nextMap, (int)sizeof(nextMap)))
         {
             char nextPath[ARGS_MAP_PATH_MAX];
-
-            insideNextLevel = true;
 
             if (Args_ResolveMapPath(nextPath, (int)sizeof(nextPath), nextMap))
                 LoadMap(nextPath);
