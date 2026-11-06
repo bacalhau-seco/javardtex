@@ -5,16 +5,16 @@ const int height = 480;
 
 int main(int argc, char *argv[])
 {
-  InitWindow(width, height, "nigger");
+    InitWindow(width, height, "nigger");
 
-  while (!WindowShouldClose()) {
-    BeginDrawing();
-      ClearBackground(RAYWHITE);
-      BeginMode3D(Camera3D camera);
-      EndMode3D();
-    EndDrawing();
-  }
-  CloseWindow();
-  
-  return 0;
+    while (!WindowShouldClose()) {
+        BeginDrawing();
+            ClearBackground(RAYWHITE);
+            BeginMode3D();
+            EndMode3D();
+        EndDrawing();
+}
+CloseWindow();
+
+return 0;
 }
