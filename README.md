@@ -20,6 +20,8 @@ Just engine code. Actual game assets will not be present on this.
 - code needs to be so simple a baby can modify it
 - multiplayer first
 - literaly copy quake's design structure
+- new games are a fork of the engine
+- no separate game code
 
 ## Programming tips
 - follow KISS (keep it simple stupid)
