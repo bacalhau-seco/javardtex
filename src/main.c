@@ -1,20 +1,14 @@
-#include <raylib.h>
-
-const int width = 640;
-const int height = 480;
+#include <stdio.h>
+#include <string.h>
+#include "server.h"
 
 int main(int argc, char *argv[])
 {
-    InitWindow(width, height, "nigger");
-
-    while (!WindowShouldClose()) {
-        BeginDrawing();
-            ClearBackground(RAYWHITE);
-            BeginMode3D();
-            EndMode3D();
-        EndDrawing();
-}
-CloseWindow();
-
-return 0;
+    if (argc > 1) {
+        if (strcmp(argv[1], "server") == 0) {
+            printf("starting the server...\n");
+            SV_main();
+        }
+    }
+    return 0;
 }
