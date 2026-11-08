@@ -9,6 +9,8 @@ int main(int argc, char *argv[])
             printf("starting the server...\n");
             SV_main();
         }
+    }else {
+        printf("starting the clinet");
     }
     return 0;
 }

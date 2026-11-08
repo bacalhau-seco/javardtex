@@ -56,3 +56,10 @@ Just engine code. Actual game assets will not be present on this.
 - AI
 - Guns if that wasnt added in march
 - Ready to make a full campaign
+
+## DOCS (kind of)
+- net.h: netcode function declarations
+- net.c: netcode (shared between client and server)
+- main.c: main code which starts the client or the server
+- server.h: server specific function declarations and macros
+- sv_main.c: code that manages and starts the server
