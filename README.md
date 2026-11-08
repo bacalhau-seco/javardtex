@@ -32,7 +32,7 @@ Just engine code. Actual game assets will not be present on this.
 
 ## Programming tips
 - follow KISS (keep it simple stupid)
-- keep the game secure
+- error handling is optional
 - prioritize gameplay over graphics
 
 ## Things to do over time

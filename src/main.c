@@ -10,7 +10,8 @@ int main(int argc, char *argv[])
             SV_main();
         }
     }else {
-        printf("starting the clinet");
+        printf("starting the clinet\n");
     }
     return 0;
 }
+
