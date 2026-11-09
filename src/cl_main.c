@@ -8,7 +8,6 @@
 #include <sys/socket.h>
 
 void CL_main(const char *addr, const int port) {
-    char buf[1400];
     char *packet = "wassup niggers";
     int sockfd = NET_StartSocket(0);
     printf("connecting to %s\n", addr);
