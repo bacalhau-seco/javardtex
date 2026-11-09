@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "server.h"
+#include "client.h"
 
 int main(int argc, char *argv[])
 {
@@ -10,7 +11,9 @@ int main(int argc, char *argv[])
             SV_main();
         }
     }else {
-        printf("starting the clinet\n");
+        const char *addr = "127.0.0.1";
+        const int port = 6969;
+        CL_main(addr, port);
     }
     return 0;
 }

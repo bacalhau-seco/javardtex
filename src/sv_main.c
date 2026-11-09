@@ -14,6 +14,8 @@ void SV_main(void)
     printf("server opened on port %d\n", PORT);
 
     for (;;) {
+        ssize_t n = recv(sockfd, buf, sizeof buf, 0);
+        printf("%.*s\n", (int)n, buf);
     }
     close(sockfd);
 }
