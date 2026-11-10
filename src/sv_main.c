@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/socket.h>
+#include <arpa/inet.h>
 
 #include "net.h"
 #include "server.h"
@@ -14,7 +15,10 @@ void SV_main(void)
     printf("server opened on port %d\n", PORT);
 
     for (;;) {
-        ssize_t n = recv(sockfd, buf, sizeof buf, 0);
+        struct sockaddr_in from;
+        socklen_t fromlen = sizeof(from);
+
+        ssize_t n = recvfrom(sockfd, buf, sizeof(buf), 0, (struct sockaddr *)&from, &fromlen);
         printf("%.*s\n", (int)n, buf);
     }
     close(sockfd);

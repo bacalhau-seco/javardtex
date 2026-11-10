@@ -36,7 +36,7 @@ Just engine code. Actual game assets will not be present on this.
 - prioritize gameplay over graphics
 
 ## Things to do over time
-### December:
+### January:
 - Movement and Camera
 - Multiplayer servers working
 - Server browser
