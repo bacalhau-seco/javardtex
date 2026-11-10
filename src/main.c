@@ -11,8 +11,8 @@ int main(int argc, char *argv[])
         int port = 6969;
         int playercount = 16;
         int gamemode = 0; // 0 = singleplayer, 1 = deathmatch, 2 = coop
+        char *arg = argv[1];
         if (strcmp(argv[1], "server") == 0) {
-            printf("starting the server...\n");
             if (strcmp(argv[2], "") == 0) {
                 ip = argv[2];
             }
@@ -26,10 +26,10 @@ int main(int argc, char *argv[])
                 gamemode = atoi(argv[5]);
             }
             SV_main(ip, port, playercount, gamemode);   
+            printf("starting the server %s:%i with %i and gamemode %i\n", ip, port, playercount, gamemode);
 
         }
         else if (strcmp(argv[1], "join") == 0) {
-            printf("connecting to the server...\n");
             if (strcmp(argv[2], "") == 0) {
                 ip = argv[2];
             }
@@ -37,6 +37,7 @@ int main(int argc, char *argv[])
                 port = atoi(argv[3]);
             }
             CL_main(ip, port);
+            printf("connecting to the server on %s:%i\n", ip, port);
         }
     }else {
         const char *addr = "127.0.0.1";
