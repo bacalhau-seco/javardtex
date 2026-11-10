@@ -8,15 +8,17 @@
 
 static client_t slots[MAXPLAYERS]; // this defines the slots used
 
-void SV_main(void)
+void SV_main(char *ip, int port, int playercount, int gamemode)
 {
     char buf[1400];
-    int sockfd = NET_StartSocket(PORT);
+    int sockfd = NET_StartSocket(port);
     if (sockfd < 0) return;
 
-    client_t slots[MAXPLAYERS] = {0}; // initializes the slots
+    client_t slots[playercount] = {}; // initializes the slots
 
-    printf("server opened on port %d\n", PORT);
+    printf("server opened on: %s:%d\n", ip, port);
+    printf("server opened with maximum of %d players\n", playercount);
+    printf("server opened with gamemode: %d\n", gamemode);
 
 
 

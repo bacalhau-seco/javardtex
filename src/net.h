@@ -5,7 +5,7 @@
 
 // here i want to define the packets used by the network
 
-// TODO: peer2peer chalange to validade players 
+// TODO: peer2peer chalange to validate players 
 
 typedef enum {FREE, CONNECTED} clstate_t; // possible client slot states
                                           // goal here is that the server will keep track of
