@@ -63,3 +63,7 @@ Just engine code. Actual game assets will not be present on this.
 - main.c: main code which starts the client or the server
 - server.h: server specific function declarations and macros
 - sv_main.c: code that manages and starts the server
+
+### how to open:
+./game server ip port maxplayers gamemode
+./game join ip port
