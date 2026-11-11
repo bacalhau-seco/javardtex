@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <time.h>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -46,6 +47,11 @@ void SV_main(char *ip, int port, int maxplayers, int gamemode)
         inet_ntop(AF_INET, &from.sin_addr, ip, sizeof ip);
         printf("from %s:%d\n", ip, ntohs(from.sin_port));
         sendto(sockfd, "pong", 4, 0, (struct sockaddr *)&from, fromlen);
+
+        // HOW TO DO THE TICKRATE SYSTEM:
+        // i need to calculate the time it takes to comeplete this for loop
+        // then wait the rest of the time to complete a 128Hz tick
+        // if this value is then negative idk ig could print an error saying how behind it is or some shit
     }
     close(sockfd);
 }

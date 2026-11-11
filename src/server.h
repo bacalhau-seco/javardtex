@@ -4,6 +4,7 @@
 #define PORT 6969
 #define IP "127.0.0.1"
 #define GAMEMODE 0 // 0 = singleplayer, 1 = deathmatch, 2 = coop
+#define TICKRATE 128
 
 void SV_main(char *ip, int port, int maxplayers, int gamemode);
 void SV_Connect(void);
