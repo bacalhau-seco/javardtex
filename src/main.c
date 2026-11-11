@@ -13,7 +13,7 @@ int main(int argc, char *argv[])
         int gamemode = 0; // 0 = singleplayer, 1 = deathmatch, 2 = coop
         char *arg = argv[1];
         if (strcmp(argv[1], "server") == 0) {
-            if (strcmp(argv[2], "") == 0) {
+            if(argv[2]!= NULL) {
                 ip = argv[2];
             }
             if(argv[3]!= NULL){
@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
 
         }
         else if (strcmp(argv[1], "join") == 0) {
-            if (strcmp(argv[2], "") == 0) {
+            if (argv[2]!= NULL) {
                 ip = argv[2];
             }
             if(argv[3]!= NULL){
@@ -38,6 +38,10 @@ int main(int argc, char *argv[])
             }
             CL_main(ip, port);
             printf("connecting to the server on %s:%i\n", ip, port);
+        }
+        else {
+            printf("server usage: server ip port playercount gamemode\n");
+            printf("client usage: join ip port\n");
         }
     }else {
         const char *addr = "127.0.0.1";
