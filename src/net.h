@@ -17,6 +17,7 @@ typedef struct {
     double lastmsg; // timestamp of the last time client was pinged
 } client_t ; // this represents each server slot
 
-int NET_StartSocket(int port);
+// ip == NULL binds INADDR_ANY, port == 0 picks an ephemeral port
+int NET_StartSocket(const char *ip, int port);
 
 #endif

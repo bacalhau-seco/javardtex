@@ -11,15 +11,21 @@
 void CL_main(const char *addr, const int port) {
     char buf[1400];
     char *packet = "wassup server";
-    int sockfd = NET_StartSocket(0);
-    printf("connecting to %s\n", addr);
+    int sockfd = NET_StartSocket(NULL, 0);
+    if (sockfd < 0) return;
+    printf("connecting to %s:%d\n", addr, port);
 
     // connect to the server
     struct sockaddr_in server = {0}; // idk what the 0 is btw
     server.sin_family = AF_INET; // use ipv4
     server.sin_port = htons(port); //  connects the specified port
+    if (inet_pton(AF_INET, addr, &server.sin_addr) != 1) { // write the set IP to server.sin_addr so it can connect later in the code
+        fprintf(stderr, "invalid server address: %s\n", addr);
+        close(sockfd);
+        return;
+    }
     
-    if (connect(sockfd, (struct sockaddr *) &server, sizeof(server)) < 0 ) { // handling errors
+    if (connect(sockfd, (struct sockaddr *) &server, sizeof(server)) < 0 ) { // connects to local socket which is pointing to the server
         perror("connect");
         close(sockfd);
         return;
