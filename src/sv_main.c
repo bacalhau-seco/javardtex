@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -20,12 +19,8 @@ void SV_main(char *ip, int port, int maxplayers, int gamemode)
     int sockfd = NET_StartSocket(ip, port);
     if (sockfd < 0) return;
 
-    client_t *slots = calloc(maxplayers, sizeof *slots); // one slot per allowed player, FREE == 0
-    if (slots == NULL) {
-        perror("calloc");
-        close(sockfd);
-        return;
-    }
+    client_t slots[maxplayers]; // one slot per allowed player
+    for (int i = 0; i < maxplayers; i++) slots[i].state = FREE; // initializes the slots
 
     printf("server opened on: %s:%d\n", ip, port);
     printf("server opened with maximum of %d players\n", maxplayers);
@@ -53,7 +48,6 @@ void SV_main(char *ip, int port, int maxplayers, int gamemode)
         sendto(sockfd, "pong", 4, 0, (struct sockaddr *)&from, fromlen);
     }
     close(sockfd);
-    free(slots);
 }
 
 void SV_connect() {
