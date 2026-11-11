@@ -1,3 +1,5 @@
+#include <bits/time.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <time.h>
 #include <unistd.h>
@@ -7,10 +9,18 @@
 #include "net.h"
 #include "server.h"
 
+static int64_t get_time_ns() {
+    struct timespec t; // time
+    clock_gettime(CLOCK_MONOTONIC, &t);
+    return (int64_t)t.tv_sec*1000000000+t.tv_nsec;
+} 
+
 void SV_main(char *ip, int port, int maxplayers, int gamemode)
 {
     char buf[1400];
     char *command[256]; // commands sent by the client
+    struct timespec tick;
+    
 
     if (maxplayers < 1) {
         fprintf(stderr, "maxplayers must be >= 1\n");
@@ -23,15 +33,13 @@ void SV_main(char *ip, int port, int maxplayers, int gamemode)
     client_t slots[maxplayers]; // one slot per allowed player
     for (int i = 0; i < maxplayers; i++) slots[i].state = FREE; // initializes the slots
 
-    printf("server opened on: %s:%d\n", ip, port);
-    printf("server opened with maximum of %d players\n", maxplayers);
-    printf("server opened with gamemode: %d\n", gamemode);
-
+    printf("nigga\n");
 
     for (;;) {
         // TODO: 120hz tick system
         // connect clients to the server
         // implement server commands (i think this requires multithreading so the server runs on the background)
+        int64_t tf = get_time_ns();
 
         struct sockaddr_in from;
         socklen_t fromlen = sizeof(from);
@@ -42,20 +50,27 @@ void SV_main(char *ip, int port, int maxplayers, int gamemode)
         }
 
         printf("%.*s", (int)n, buf); // basically what i said in CL_init
-                                             //
+
         char ip[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &from.sin_addr, ip, sizeof ip);
         printf("from %s:%d\n", ip, ntohs(from.sin_port));
         sendto(sockfd, "pong", 4, 0, (struct sockaddr *)&from, fromlen);
 
-        // HOW TO DO THE TICKRATE SYSTEM:
-        // i need to calculate the time it takes to comeplete this for loop
-        // then wait the rest of the time to complete a 128Hz tick
-        // if this value is then negative idk ig could print an error saying how behind it is or some shit
+        int64_t tl = get_time_ns();
+        int64_t delta = tl - tf;
+        int64_t remaning = tick_ns - delta;
+
+        if (remaning > 0) {
+            tick.tv_sec = remaning / 1000000000;
+            tick.tv_nsec = remaning % 1000000000;
+            printf("%.3f ms, %.3f ms\n", delta / 1e6, remaning / 1e6);
+            nanosleep(&tick, NULL);
+        }else {
+            printf("compra um server novo, seu pobre\n");
+        }
+
+
     }
     close(sockfd);
 }
 
-void SV_connect() {
-
-}
