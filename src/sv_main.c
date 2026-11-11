@@ -33,8 +33,6 @@ void SV_main(char *ip, int port, int maxplayers, int gamemode)
     client_t slots[maxplayers]; // one slot per allowed player
     for (int i = 0; i < maxplayers; i++) slots[i].state = FREE; // initializes the slots
 
-    printf("nigga\n");
-
     for (;;) {
         // TODO: 120hz tick system
         // connect clients to the server
