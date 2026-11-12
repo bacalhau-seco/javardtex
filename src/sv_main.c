@@ -20,8 +20,8 @@ void SV_main(char *ip, int port, int maxplayers, int gamemode)
     char buf[1400];
     char *command[256]; // commands sent by the client
     struct timespec tick;
-    int64_t tc; // tick count
-    int playercount;
+    uint64_t tc = 0; // tick count
+    int playercount = 0;
     
 
     if (maxplayers < 1) {
@@ -51,11 +51,10 @@ void SV_main(char *ip, int port, int maxplayers, int gamemode)
             }
         }
 
-        printf("%.*s", (int)n, buf); // basically what i said in CL_init
+        printf("%.*s\n", (int)n, buf); // basically what i said in CL_init
 
         char ip[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &from.sin_addr, ip, sizeof ip);
-        printf("from %s:%d\n", ip, ntohs(from.sin_port));
         sendto(sockfd, "pong", 4, 0, (struct sockaddr *)&from, fromlen);
 
         int64_t tl = get_time_ns();
@@ -65,7 +64,7 @@ void SV_main(char *ip, int port, int maxplayers, int gamemode)
         if (remaning > 0) {
             tick.tv_sec = remaning / 1000000000;
             tick.tv_nsec = remaning % 1000000000;
-            printf("tick time: %.3f ms | waiting time: %.3f ms\n | playercount: %i, maxplayers: %i", delta / 1e6, remaning / 1e6, playercount, maxplayers);
+            printf("tick time: %.3f ms | waiting time: %.3f ms | playercount: %i, maxplayers: %i | tick: %lu |\n", delta / 1e6, remaning / 1e6, playercount, maxplayers, tc);
             nanosleep(&tick, NULL);
         }else {
             printf("compra um server novo, seu pobre\n");
