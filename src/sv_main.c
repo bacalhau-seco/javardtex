@@ -43,11 +43,7 @@ void SV_main(char *ip, int port, int maxplayers, int gamemode)
 
         struct sockaddr_in from;
         socklen_t fromlen = sizeof(from);
-        ssize_t n = recvfrom(sockfd, buf, sizeof(buf), 0, (struct sockaddr *)&from, &fromlen);
-        if (n < 0) {
-            perror("recvfrom");
-            break;
-        }
+        ssize_t n = recvfrom(sockfd, buf, sizeof(buf), MSG_DONTWAIT, (struct sockaddr *)&from, &fromlen);
 
         for (int i = 0; i < maxplayers; i++) {
             if (slots[i].state == CONNECTED) {
