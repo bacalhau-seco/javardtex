@@ -20,6 +20,7 @@ void SV_main(char *ip, int port, int maxplayers, int gamemode)
     char buf[1400];
     char *command[256]; // commands sent by the client
     struct timespec tick;
+    int64_t tc; // tick count
     
 
     if (maxplayers < 1) {
@@ -34,8 +35,8 @@ void SV_main(char *ip, int port, int maxplayers, int gamemode)
     for (int i = 0; i < maxplayers; i++) slots[i].state = FREE; // initializes the slots
 
     for (;;) {
-        // TODO: 120hz tick system
-        // connect clients to the server
+        // TODO: 
+        // connect clients to the server slots
         // implement server commands (i think this requires multithreading so the server runs on the background)
         int64_t tf = get_time_ns();
 
@@ -66,8 +67,7 @@ void SV_main(char *ip, int port, int maxplayers, int gamemode)
         }else {
             printf("compra um server novo, seu pobre\n");
         }
-
-
+        tc ++;
     }
     close(sockfd);
 }
