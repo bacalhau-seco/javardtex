@@ -21,6 +21,7 @@ void SV_main(char *ip, int port, int maxplayers, int gamemode)
     char *command[256]; // commands sent by the client
     struct timespec tick;
     int64_t tc; // tick count
+    int playercount;
     
 
     if (maxplayers < 1) {
@@ -48,6 +49,12 @@ void SV_main(char *ip, int port, int maxplayers, int gamemode)
             break;
         }
 
+        for (int i = 0; i < maxplayers; i++) {
+            if (slots[i].state == CONNECTED) {
+                playercount ++;
+            }
+        }
+
         printf("%.*s", (int)n, buf); // basically what i said in CL_init
 
         char ip[INET_ADDRSTRLEN];
@@ -57,12 +64,12 @@ void SV_main(char *ip, int port, int maxplayers, int gamemode)
 
         int64_t tl = get_time_ns();
         int64_t delta = tl - tf;
-        int64_t remaning = tick_ns - delta;
+        int64_t remaning = TICK_NS - delta;
 
         if (remaning > 0) {
             tick.tv_sec = remaning / 1000000000;
             tick.tv_nsec = remaning % 1000000000;
-            printf("%.3f ms, %.3f ms\n", delta / 1e6, remaning / 1e6);
+            printf("tick time: %.3f ms | waiting time: %.3f ms\n | playercount: %i, maxplayers: %i", delta / 1e6, remaning / 1e6, playercount, maxplayers);
             nanosleep(&tick, NULL);
         }else {
             printf("compra um server novo, seu pobre\n");
