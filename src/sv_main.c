@@ -22,6 +22,7 @@ void SV_main(char *ip, int port, int maxplayers, int gamemode)
     struct timespec tick;
     uint64_t tc = 0; // tick count
     int playercount = 0;
+    int playerexists = 0;
     
 
     if (maxplayers < 1) {
@@ -40,18 +41,42 @@ void SV_main(char *ip, int port, int maxplayers, int gamemode)
         // connect clients to the server slots
         // implement server commands (i think this requires multithreading so the server runs on the background)
         int64_t tf = get_time_ns();
+        playerexists = 0;
 
         struct sockaddr_in from;
         socklen_t fromlen = sizeof(from);
-        ssize_t n = recvfrom(sockfd, buf, sizeof(buf), MSG_DONTWAIT, (struct sockaddr *)&from, &fromlen);
+        ssize_t n = recvfrom(sockfd, buf, sizeof(buf), MSG_DONTWAIT, (struct sockaddr *)&from, &fromlen); // gets message from the clients
 
+        // JOIN A SERVER
+        if (n != -1) { // if the buffer isnt empty
+            for (int i = 0; i < maxplayers; i++) {
+                if (slots[i].addr.sin_addr.s_addr == from.sin_addr.s_addr || slots[i].addr.sin_port == from.sin_port ) {
+                    printf("player is already present");
+                    playerexists = 1; // it seems like i LOVE to make 1 time use variables
+                                      // i will find diferent logic for this
+                                      // right now its fine ig
+                    break;
+                }
+            }
+            if (playerexists == 0) {
+                for (int j = 0; j < maxplayers; j++){ 
+                    if (slots[j].state == FREE) {
+                        slots[j].state = CONNECTED; 
+                        slots[j].addr = from; 
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // counts the players
+        playercount = 0; 
         for (int i = 0; i < maxplayers; i++) {
             if (slots[i].state == CONNECTED) {
                 playercount ++;
             }
         }
 
-        printf("%.*s\n", (int)n, buf); // basically what i said in CL_init
 
         char ip[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &from.sin_addr, ip, sizeof ip);
