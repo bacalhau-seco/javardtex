@@ -63,6 +63,7 @@ void SV_main(char *ip, int port, int maxplayers, int gamemode)
                     if (slots[j].state == FREE) {
                         slots[j].state = CONNECTED; 
                         slots[j].addr = from; 
+                        slots[j].lastmsg = tf;
                         break;
                     }
                 }
@@ -75,6 +76,16 @@ void SV_main(char *ip, int port, int maxplayers, int gamemode)
             if (slots[i].state == CONNECTED) {
                 playercount ++;
             }
+        }
+
+        for (int i = 0; i < playercount; i++) {
+            if ( (tf - slots[i].lastmsg) > 5000000 ){
+                slots[i].state = FREE; 
+                slots[i].addr.sin_addr.s_addr = 0; 
+                slots[i].addr.sin_port = 0; 
+                slots[i].lastmsg = 0;
+            }
+
         }
 
 
