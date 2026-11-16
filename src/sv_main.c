@@ -50,7 +50,7 @@ void SV_main(char *ip, int port, int maxplayers, int gamemode)
         // JOIN A SERVER
         if (n != -1) { // if the buffer isnt empty
             for (int i = 0; i < maxplayers; i++) {
-                if (slots[i].addr.sin_addr.s_addr == from.sin_addr.s_addr || slots[i].addr.sin_port == from.sin_port ) {
+                if (slots[i].addr.sin_addr.s_addr == from.sin_addr.s_addr && slots[i].addr.sin_port == from.sin_port ) {
                     printf("player is already present");
                     playerexists = 1; // it seems like i LOVE to make 1 time use variables
                                       // i will find diferent logic for this
