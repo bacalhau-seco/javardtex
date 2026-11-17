@@ -8,6 +8,7 @@
 
 #include "net.h"
 #include "server.h"
+#include "protocol.h"
 
 static int64_t get_time_ns() {
     struct timespec t; // time

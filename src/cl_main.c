@@ -1,3 +1,4 @@
+#include "protocol.h"
 #include "net.h"
 #include "client.h"
 #include <netinet/in.h>
@@ -10,7 +11,7 @@
 
 void CL_main(const char *addr, const int port) {
     char buf[1400];
-    char *packet = "wassup server";
+    char *packet;
     int sockfd = NET_StartSocket(NULL, 0);
     if (sockfd < 0) return;
     printf("connecting to %s:%d\n", addr, port);
@@ -32,6 +33,7 @@ void CL_main(const char *addr, const int port) {
     }
 
     for (;;) {
+        fgets(packet, 64, stdin);
         send(sockfd, packet, strlen(packet), 0);
         size_t n = recv(sockfd, buf, sizeof(buf), 0);
         printf("%.*s", (int)n, buf); // basically this will print exactly the lenght of buf
