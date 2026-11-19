@@ -80,7 +80,7 @@ void SV_main(char *ip, int port, int maxplayers, int gamemode)
         }
 
         for (int i = 0; i < playercount; i++) {
-            if ( (tf - slots[i].lastmsg) > 5000000 ){
+            if ( (tf - slots[i].lastmsg) > 5000000000 ){
                 slots[i].state = FREE; 
                 slots[i].addr.sin_addr.s_addr = 0; 
                 slots[i].addr.sin_port = 0; 
