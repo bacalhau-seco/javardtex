@@ -69,6 +69,9 @@ void SV_main(char *ip, int port, int maxplayers, int gamemode)
                     }
                 }
             }
+            char ip[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, &from.sin_addr, ip, sizeof ip);
+            sendto(sockfd, "pong", 4, 0, (struct sockaddr *)&from, fromlen);
         }
         
         // counts the players
@@ -79,21 +82,14 @@ void SV_main(char *ip, int port, int maxplayers, int gamemode)
             }
         }
 
-        for (int i = 0; i < playercount; i++) {
+        for (int i = 0; i < maxplayers; i++) {
             if ( (tf - slots[i].lastmsg) > 5000000000 ){
-                slots[i].state = FREE; 
-                slots[i].addr.sin_addr.s_addr = 0; 
-                slots[i].addr.sin_port = 0; 
-                slots[i].lastmsg = 0;
+                slots[i] = (client_t){0}; // bruh i could just have done this from the start
             }
 
         }
 
-
-        char ip[INET_ADDRSTRLEN];
-        inet_ntop(AF_INET, &from.sin_addr, ip, sizeof ip);
-        sendto(sockfd, "pong", 4, 0, (struct sockaddr *)&from, fromlen);
-
+        // BELLOW THIS JUST ENDS THE TICK
         int64_t tl = get_time_ns();
         int64_t delta = tl - tf;
         int64_t remaning = TICK_NS - delta;
