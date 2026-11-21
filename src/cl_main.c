@@ -33,15 +33,17 @@ void CL_main(const char *addr, const int port) {
     }
 
     for (;;) { // TODO: actual game loop
-               //
 
         send(sockfd, &packet, sizeof(packet), 0);
         size_t n = recv(sockfd, buf, sizeof(buf), 0);
-        printf("%.*s", (int)n, buf); // basically this will print exactly the lenght of buf
-                                             // so it will read the precision size as n and print buf
-                                             // vim is so cool that it lets me right comments
-                                             // like this
-                                             // now this is a big ass comment
+        if (n>0) {
+            printf("%.*s", (int)n, buf); // basically this will print exactly the lenght of buf
+                                                 // so it will read the precision size as n and print buf
+                                                 // vim is so cool that it lets me right comments
+                                                 // like this
+                                                 // now this is a big ass comment
+
+        }
     }
     close(sockfd);
 }
