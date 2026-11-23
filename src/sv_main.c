@@ -1,6 +1,7 @@
 #include <bits/time.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 #include <time.h>
 #include <unistd.h>
 #include <sys/socket.h>
@@ -50,28 +51,37 @@ void SV_main(char *ip, int port, int maxplayers, int gamemode)
 
         // JOIN A SERVER
         if (n != -1) { // if the buffer isnt empty
-            for (int i = 0; i < maxplayers; i++) {
-                if (slots[i].addr.sin_addr.s_addr == from.sin_addr.s_addr && slots[i].addr.sin_port == from.sin_port ) {
-                    printf("player is already present");
-                    playerexists = 1; // it seems like i LOVE to make 1 time use variables
-                                      // i will find diferent logic for this
-                                      // right now its fine ig
-                    break;
-                }
-            }
-            if (playerexists == 0) {
-                for (int j = 0; j < maxplayers; j++){ 
-                    if (slots[j].state == FREE) {
-                        slots[j].state = CONNECTED; 
-                        slots[j].addr = from; 
-                        slots[j].lastmsg = tf;
-                        break;
+            switch ((uint8_t)buf[0]) {
+                case JOIN:
+                    pckt_join_t j;
+                    memcpy(&j, buf, sizeof(j));
+                    for (int i = 0; i < maxplayers; i++) {
+                        if (slots[i].addr.sin_addr.s_addr == from.sin_addr.s_addr && slots[i].addr.sin_port == from.sin_port ) {
+                            printf("player is already present");
+                            playerexists = 1; // it seems like i LOVE to make 1 time use variables
+                                              // i will find diferent logic for this
+                                              // right now its fine ig
+                            break;
+                        }
                     }
-                }
+                    if (playerexists == 0) {
+                        for (int i = 0; i < maxplayers; i++){ 
+                            if (slots[i].state == FREE) {
+                                slots[i].state = CONNECTED; 
+                                slots[i].addr = from; 
+                                snprintf(slots[i].name, sizeof slots[i].name, "%.*s", (int)sizeof j.name, j.name);
+                                slots[i].lastmsg = tf;
+                                break;
+                            }
+                        }
+                    }
+
+                    break;
+                char ip[INET_ADDRSTRLEN];
+                inet_ntop(AF_INET, &from.sin_addr, ip, sizeof ip);
+                sendto(sockfd, "welcome player", 4, 0, (struct sockaddr *)&from, fromlen);
+            
             }
-            char ip[INET_ADDRSTRLEN];
-            inet_ntop(AF_INET, &from.sin_addr, ip, sizeof ip);
-            sendto(sockfd, "pong", 4, 0, (struct sockaddr *)&from, fromlen);
         }
         
         // counts the players

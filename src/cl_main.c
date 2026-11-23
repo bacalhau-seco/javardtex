@@ -3,6 +3,7 @@
 #include "client.h"
 #include <netinet/in.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <arpa/inet.h>
@@ -11,7 +12,7 @@
 
 void CL_main(const char *addr, const int port) {
     char buf[1400];
-    pckt_t packet = {.type = JOIN, .name = "player"};
+    pckt_join_t join = {.type = JOIN, .name = "player"};
     int sockfd = NET_StartSocket(NULL, 0);
     if (sockfd < 0) return;
     printf("connecting to %s:%d\n", addr, port);
@@ -32,12 +33,19 @@ void CL_main(const char *addr, const int port) {
         return;
     }
 
+    send(sockfd, &join, sizeof(join), 0); // joins the game
+
     for (;;) { // TODO: actual game loop
 
-        send(sockfd, &packet, sizeof(packet), 0);
-        size_t n = recv(sockfd, buf, sizeof(buf), 0);
-        if (n>0) {
-            printf("%.*s", (int)n, buf); // basically this will print exactly the lenght of buf
+        size_t n = recv(sockfd, buf, sizeof(buf), MSG_DONTWAIT); // recieves data from the server
+        if (n>1) {
+            switch ((uint8_t)buf[0]) { // will get the packet type
+                case SNAPSHOT:
+                    printf("snapshot recieved");
+                    break;
+            
+            }
+//            printf("%.*s", (int)n, buf); // basically this will print exactly the lenght of buf
                                                  // so it will read the precision size as n and print buf
                                                  // vim is so cool that it lets me right comments
                                                  // like this
