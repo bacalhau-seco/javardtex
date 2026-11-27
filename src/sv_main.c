@@ -39,9 +39,6 @@ void SV_main(char *ip, int port, int maxplayers, int gamemode)
     for (int i = 0; i < maxplayers; i++) slots[i].state = FREE; // initializes the slots
 
     for (;;) {
-        // TODO: 
-        // connect clients to the server slots
-        // implement server commands (i think this requires multithreading so the server runs on the background)
         int64_t tf = get_time_ns();
         playerexists = 0;
 
