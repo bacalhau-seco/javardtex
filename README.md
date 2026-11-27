@@ -12,7 +12,8 @@ Just engine code. Actual game assets will not be present on this.
 - BSP 30 (valve)
 - wad3 (valve)
 - guns
-- ez to make games
+- ez to make cool games on
+- better than unreal engine
 
 ## Things it won't have (probably)
 - console commands
@@ -24,23 +25,19 @@ Just engine code. Actual game assets will not be present on this.
 ## Goals:
 - NO AI CODE
 - fully made in C
-- code needs to be so simple a baby can modify it
+- code needs to be so ez to understand a baby can modify it
 - multiplayer first
-- literaly copy quake's design structure
 - new games are a fork of the engine
 - no separate game code
 
 ## Programming tips
-- follow KISS (keep it simple stupid)
-- error handling is optional
-- prioritize gameplay over graphics
+- KISS (keep it simple stupid)
 
 ## Things to do over time
 ### January:
 - Movement and Camera
 - Multiplayer servers working
 - Server browser
-- NO GRAPHICS YET
 - maybe load BSPs? (at least vertices)
 
 ### March
@@ -56,13 +53,6 @@ Just engine code. Actual game assets will not be present on this.
 - AI
 - Guns if that wasnt added in march
 - Ready to make a full campaign
-
-## DOCS (kind of)
-- net.h: netcode function declarations
-- net.c: netcode (shared between client and server)
-- main.c: main code which starts the client or the server
-- server.h: server specific function declarations and macros
-- sv_main.c: code that manages and starts the server
 
 ### how to open:
 ./game server ip port maxplayers gamemode
